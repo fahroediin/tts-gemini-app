@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTS Cerdas by Gemini</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Teka Teki Silang Cerdas</h1>
+
+        <!-- Setup Screen -->
+        <div id="setup-screen" class="screen-card">
+            <h2>Mulai Permainan Baru</h2>
+            <input type="text" id="player-name" placeholder="Masukkan Nama Anda">
+            <button id="random-name-btn">Nama Acak</button>
+            <br><br>
+            <label for="theme-select">Pilih Tema:</label>
+            <select id="theme-select">
+                <option value="Ilmu Pengetahuan">Ilmu Pengetahuan</option>
+                <option value="Geografi Dunia">Geografi Dunia</option>
+                <option value="Hewan">Hewan</option>
+                <option value="Makanan & Minuman">Makanan & Minuman</option>
+                <option value="Teknologi">Teknologi</option>
+                <option value="Sejarah">Sejarah</option>
+                <option value="Olahraga">Olahraga</option>
+            </select>
+            <br><br>
+            <button id="start-game-btn">Mulai!</button>
+        </div>
+
+        <!-- Game Screen (Awalnya tersembunyi) -->
+        <div id="game-screen" class="screen-card hidden">
+            <div id="puzzle-container">
+                <div id="crossword-grid"></div>
+                <div id="clues-container">
+                    <div id="across-clues"><h3>Mendatar</h3><ul></ul></div>
+                    <div id="down-clues"><h3>Menurun</h3><ul></ul></div>
+                </div>
+            </div>
+            <button id="finish-game-btn">Selesai & Cek Jawaban</button>
+        </div>
+
+        <!-- End Screen (Awalnya tersembunyi) -->
+        <div id="end-screen" class="screen-card hidden">
+            <h2>Permainan Selesai!</h2>
+            <p>Skor Anda: <strong id="final-score">0</strong></p>
+            <h3>Papan Peringkat</h3>
+            <ol id="leaderboard-list"></ol>
+            <hr>
+            <h3>Beri kami masukan!</h3>
+            <textarea id="feedback-box" placeholder="Saran atau kritik..."></textarea>
+            <br>
+            <button id="submit-feedback-btn">Kirim Saran</button>
+            <br><br>
+            <button onclick="window.location.reload()">Main Lagi</button>
+        </div>
+
+        <!-- Loading Spinner (Awalnya tersembunyi) -->
+        <div id="loading-spinner" class="hidden">
+            <h2>Membuat TTS... Mohon tunggu...</h2>
+            <p>AI sedang meracik pertanyaan untuk Anda!</p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

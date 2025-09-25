@@ -1,0 +1,188 @@
+/* General Body & Font Styling */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f0f2f5;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.container {
+    width: 100%;
+    max-width: 1200px;
+    background-color: #ffffff;
+    padding: 25px 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+h1, h2, h3 {
+    color: #1c1e21;
+}
+
+h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+}
+
+/* Utility Class */
+.hidden {
+    display: none !important;
+}
+
+/* Card Styling for Sections */
+.screen-card {
+    border: 1px solid #dddfe2;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+/* Setup Screen Styling */
+#setup-screen input[type="text"], #setup-screen select {
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    margin: 5px;
+    font-size: 1em;
+}
+
+button {
+    background-color: #1877f2;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: #166fe5;
+}
+
+#random-name-btn {
+    background-color: #6c757d;
+}
+#random-name-btn:hover {
+    background-color: #5a6268;
+}
+
+/* Game Screen Styling */
+#puzzle-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+#crossword-grid {
+    display: grid;
+    border: 2px solid black;
+}
+
+.grid-cell {
+    width: 35px;
+    height: 35px;
+    border: 1px solid #ccc;
+    position: relative;
+}
+
+.grid-cell.black {
+    background-color: #2c2c2c;
+}
+
+.grid-cell input {
+    width: 100%;
+    height: 100%;
+    border: none;
+    text-align: center;
+    font-size: 1.4em;
+    font-weight: bold;
+    text-transform: uppercase;
+    padding: 0;
+    background-color: #fff;
+    color: #1c1e21;
+}
+
+.grid-cell input:focus {
+    outline: 2px solid #1877f2;
+    background-color: #e7f3ff;
+}
+
+.clue-number {
+    position: absolute;
+    top: 1px;
+    left: 2px;
+    font-size: 0.6em;
+    font-weight: bold;
+    color: #555;
+}
+
+#clues-container {
+    display: flex;
+    gap: 20px;
+    text-align: left;
+    max-width: 500px;
+}
+
+#clues-container h3 {
+    margin-top: 0;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 5px;
+}
+
+#clues-container ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#clues-container li {
+    padding: 4px 0;
+}
+
+#finish-game-btn {
+    margin-top: 25px;
+    background-color: #42b72a;
+}
+#finish-game-btn:hover {
+    background-color: #36a420;
+}
+
+/* End Screen Styling */
+#leaderboard-list {
+    list-style-position: inside;
+    padding: 0;
+    max-width: 300px;
+    margin: 15px auto;
+    text-align: left;
+}
+
+#feedback-box {
+    width: 100%;
+    max-width: 400px;
+    height: 80px;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    margin-top: 10px;
+}
+
+/* Loading Spinner */
+#loading-spinner {
+    font-size: 1.2em;
+    font-weight: bold;
+    padding: 40px;
+}
