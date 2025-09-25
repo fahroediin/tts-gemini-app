@@ -82,12 +82,29 @@ button:disabled {
 }
 
 /* Game Screen Styling */
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+#timer-display {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #6c757d;
+    background-color: #f0f2f5;
+    padding: 8px 15px;
+    border-radius: 6px;
+}
+
 #puzzle-container {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 30px;
-    margin-top: 20px;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
 }
 
 #crossword-grid {
@@ -141,32 +158,37 @@ button:disabled {
 }
 
 #clues-container {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 20px;
     text-align: left;
-    max-width: 500px;
+    width: 100%;
+    margin-top: 20px;
 }
 
-#clues-container h3 {
+.clue-box {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.clue-box h3 {
     margin-top: 0;
     border-bottom: 2px solid #eee;
     padding-bottom: 5px;
 }
 
-#clues-container ul {
+.clue-box ul {
     list-style-type: none;
     padding: 0;
     margin: 0;
-    max-height: 400px;
-    overflow-y: auto;
 }
 
-#clues-container li {
+.clue-box li {
     padding: 4px 0;
 }
 
 #finish-game-btn {
-    margin-top: 25px;
     background-color: #42b72a;
 }
 #finish-game-btn:hover {
@@ -182,13 +204,13 @@ button:disabled {
 
 /* Feedback Styling */
 .grid-cell input.correct {
-    background-color: #c8e6c9; /* Hijau muda */
+    background-color: #c8e6c9;
     color: #2e7d32;
     animation: pulse-green 0.5s;
 }
 
 .grid-cell input.incorrect {
-    background-color: #ffcdd2; /* Merah muda */
+    background-color: #ffcdd2;
     color: #c62828;
     animation: shake 0.5s;
 }

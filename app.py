@@ -135,7 +135,7 @@ def create_app():
 
                 if solution_char is not None:
                     total_cells += 1
-                    is_correct = user_char and user_char.upper() == solution_char
+                    is_correct = isinstance(user_char, str) and user_char.upper() == solution_char
                     
                     if is_correct:
                         correct_cells += 1
@@ -145,8 +145,11 @@ def create_app():
         
         accuracy_score = correct_cells * 100
         completion_bonus = 5000 if correct_cells == total_cells and total_cells > 0 else 0
-        time_taken = time.time() - start_time
-        time_bonus = max(0, 600 - time_taken) * 5
+        
+        time_bonus = 0
+        if completion_bonus > 0:
+            time_taken = time.time() - start_time
+            time_bonus = max(0, 600 - time_taken) * 5
         
         final_score = int(accuracy_score + completion_bonus + time_bonus)
 

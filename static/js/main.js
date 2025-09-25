@@ -7,9 +7,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const randomNameBtn = document.getElementById('random-name-btn');
     const finishGameBtn = document.getElementById('finish-game-btn');
     const gameScoreDisplay = document.getElementById('game-score-display');
+    const timerDisplay = document.getElementById('timer-display');
 
     let userSettings = {};
     let gameFinished = false;
+    let timerInterval = null;
+
+    function startTimer() {
+        let seconds = 0;
+        timerDisplay.textContent = "Durasi: 00:00";
+        
+        if (timerInterval) {
+            clearInterval(timerInterval);
+        }
+
+        timerInterval = setInterval(() => {
+            seconds++;
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            timerDisplay.textContent = `Durasi: ${mins}:${secs}`;
+        }, 1000);
+    }
+
+    function stopTimer() {
+        if (timerInterval) {
+            clearInterval(timerInterval);
+        }
+    }
 
     randomNameBtn.addEventListener('click', async () => {
         try {
@@ -63,6 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 gameScoreDisplay.classList.add('hidden');
                 finishGameBtn.textContent = "Selesai & Cek Jawaban";
                 finishGameBtn.disabled = false;
+                startTimer();
             } else {
                 throw new Error("Data puzzle yang diterima tidak valid.");
             }
@@ -74,79 +99,118 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    finishGameBtn.addEventListener('click', async () => {
+    finishGameBtn.addEventListener('click', () => {
         if (gameFinished) {
             window.location.reload();
             return;
         }
 
-        finishGameBtn.disabled = true;
-        finishGameBtn.textContent = "Memeriksa...";
-
-        const userGrid = [];
+        // --- VALIDASI BARU: Cek apakah ada jawaban yang diisi ---
         const inputs = document.querySelectorAll('#crossword-grid input');
-        const size = Math.sqrt(document.querySelectorAll('#crossword-grid .grid-cell').length);
-        
-        for (let i = 0; i < size; i++) {
-            userGrid.push(new Array(size).fill(null));
-        }
-
-        inputs.forEach(input => {
-            const row = parseInt(input.dataset.row, 10);
-            const col = parseInt(input.dataset.col, 10);
-            userGrid[row][col] = input.value;
-        });
-
-        try {
-            const response = await fetch('/api/check-answers', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ grid: userGrid })
-            });
-
-            if (!response.ok) {
-                throw new Error("Gagal memeriksa jawaban di server.");
+        let hasAnswer = false;
+        for (const input of inputs) {
+            if (input.value.trim() !== '') {
+                hasAnswer = true;
+                break;
             }
-
-            const result = await response.json();
-            
-            const resultGrid = result.result_grid;
-            inputs.forEach(input => {
-                const row = parseInt(input.dataset.row, 10);
-                const col = parseInt(input.dataset.col, 10);
-                
-                input.classList.remove('correct', 'incorrect');
-
-                if (resultGrid[row][col] === 'correct') {
-                    input.classList.add('correct');
-                } else if (resultGrid[row][col] === 'incorrect') {
-                    input.classList.add('incorrect');
-                }
-                input.disabled = true;
-            });
-
-            gameScoreDisplay.textContent = `Skor Anda: ${result.score}`;
-            gameScoreDisplay.classList.remove('hidden');
-
-            await fetch('/api/submit-score', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: userSettings.name,
-                    score: result.score,
-                    theme: userSettings.theme
-                })
-            });
-
-            finishGameBtn.textContent = "Main Lagi";
-            finishGameBtn.disabled = false;
-            gameFinished = true;
-
-        } catch (error) {
-            alert(`Terjadi kesalahan saat menyelesaikan game: ${error.message}`);
-            finishGameBtn.disabled = false;
-            finishGameBtn.textContent = "Selesai & Cek Jawaban";
         }
+
+        if (!hasAnswer) {
+            // --- PESAN ERROR SEMENTARA DENGAN SWEETALERT ---
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal Menyelesaikan',
+                text: 'Anda harus mengisi setidaknya satu jawaban terlebih dahulu!',
+                timer: 5000,
+                timerProgressBar: true,
+                showConfirmButton: false
+            });
+            return;
+        }
+
+        // --- PESAN KONFIRMASI DENGAN SWEETALERT ---
+        Swal.fire({
+            title: 'Selesaikan Permainan?',
+            text: "Apakah Anda yakin? Jawaban akan diperiksa dan permainan akan berakhir.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#42b72a',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Ya, selesaikan!',
+            cancelButtonText: 'Batal'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                // Jika pengguna menekan "Ya", jalankan logika pengecekan
+                stopTimer();
+                finishGameBtn.disabled = true;
+                finishGameBtn.textContent = "Memeriksa...";
+
+                const userGrid = [];
+                const size = Math.sqrt(document.querySelectorAll('#crossword-grid .grid-cell').length);
+                
+                for (let i = 0; i < size; i++) {
+                    userGrid.push(new Array(size).fill(null));
+                }
+
+                inputs.forEach(input => {
+                    const row = parseInt(input.dataset.row, 10);
+                    const col = parseInt(input.dataset.col, 10);
+                    userGrid[row][col] = input.value;
+                });
+
+                try {
+                    const response = await fetch('/api/check-answers', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ grid: userGrid })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error("Gagal memeriksa jawaban di server.");
+                    }
+
+                    const resultData = await response.json();
+                    
+                    const resultGrid = resultData.result_grid;
+                    inputs.forEach(input => {
+                        const row = parseInt(input.dataset.row, 10);
+                        const col = parseInt(input.dataset.col, 10);
+                        
+                        input.classList.remove('correct', 'incorrect');
+
+                        if (resultGrid[row][col] === 'correct') {
+                            input.classList.add('correct');
+                        } else if (resultGrid[row][col] === 'incorrect') {
+                            input.classList.add('incorrect');
+                        }
+                        input.disabled = true;
+                    });
+
+                    gameScoreDisplay.textContent = `Skor Anda: ${resultData.score}`;
+                    gameScoreDisplay.classList.remove('hidden');
+
+                    await fetch('/api/submit-score', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: userSettings.name,
+                            score: resultData.score,
+                            theme: userSettings.theme
+                        })
+                    });
+
+                    finishGameBtn.textContent = "Main Lagi";
+                    finishGameBtn.disabled = false;
+                    gameFinished = true;
+
+                } catch (error) {
+                    Swal.fire('Error!', `Terjadi kesalahan saat menyelesaikan game: ${error.message}`, 'error');
+                    finishGameBtn.disabled = false;
+                    finishGameBtn.textContent = "Selesai & Cek Jawaban";
+                    startTimer();
+                }
+            }
+        });
     });
 
     function renderPuzzle(data) {
