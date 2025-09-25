@@ -4,17 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- NAMA BARU DI TITLE -->
-    <title>Teka Teki Kuis Cerdas</title>
+    <title>Qrossword - Teka Teki Quiz</title>
     
-    <!-- PENAMBAHAN SWEETALERT2 -->
+    <!-- Google Fonts: Poppins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- PENAMBAHAN FONT AWESOME UNTUK IKON -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-    
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <div class="container">
-        <!-- NAMA BARU DI HEADER -->
-        <h1>Teka Teki Kuis Cerdas</h1>
+        <!-- HEADER BARU DENGAN IKON -->
+        <div class="main-header">
+            <h1><i class="fa-solid fa-puzzle-piece"></i> Qrossword - Teka Teki Quiz</h1>
+        </div>
 
         <!-- Setup Screen -->
         <div id="setup-screen" class="screen-card">
@@ -36,32 +44,32 @@
             <button id="start-game-btn">Mulai!</button>
         </div>
 
-        <!-- Game Screen (Awalnya tersembunyi) -->
+        <!-- Game Screen -->
         <div id="game-screen" class="screen-card hidden">
             <div class="game-header">
                 <div id="timer-display">Durasi: 00:00</div>
+                <div id="game-score-display" class="hidden"></div>
                 <button id="finish-game-btn">Selesai & Cek Jawaban</button>
             </div>
 
-            <div id="puzzle-container">
-                <div id="crossword-grid"></div>
-                <div id="clues-container">
+            <div id="puzzle-wrapper">
+                <div id="grid-container">
+                    <div id="crossword-grid"></div>
+                </div>
+                <div id="clues-wrapper">
                     <div id="across-clues" class="clue-box"><h3>Mendatar</h3><ul></ul></div>
                     <div id="down-clues" class="clue-box"><h3>Menurun</h3><ul></ul></div>
                 </div>
             </div>
-            
-            <div id="game-score-display" class="hidden"></div>
         </div>
 
-        <!-- Loading Spinner (Awalnya tersembunyi) -->
+        <!-- Loading Spinner -->
         <div id="loading-spinner" class="hidden">
             <h2>Membuat TTS... Mohon tunggu...</h2>
-            <p>AI sedang meracik pertanyaan untuk Anda!</p>
+            <p>Kami sedang memproses pertanyaan untuk Anda!</p>
         </div>
     </div>
 
-    <!-- PENAMBAHAN SCRIPT SWEETALERT2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>

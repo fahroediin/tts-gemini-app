@@ -1,26 +1,29 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Deklarasi Elemen UI ---
     const setupScreen = document.getElementById('setup-screen');
     const gameScreen = document.getElementById('game-screen');
     const loadingSpinner = document.getElementById('loading-spinner');
-    
     const startGameBtn = document.getElementById('start-game-btn');
     const randomNameBtn = document.getElementById('random-name-btn');
     const finishGameBtn = document.getElementById('finish-game-btn');
     const gameScoreDisplay = document.getElementById('game-score-display');
     const timerDisplay = document.getElementById('timer-display');
+    const gridContainer = document.getElementById('grid-container');
+    const acrossCluesList = document.querySelector('#across-clues ul');
+    const downCluesList = document.querySelector('#down-clues ul');
 
+    // --- State Management ---
     let userSettings = {};
     let gameFinished = false;
     let timerInterval = null;
+    let currentFocus = { row: null, col: null, direction: 'across' };
+    let puzzleData = {};
 
+    // --- Fungsi Timer ---
     function startTimer() {
         let seconds = 0;
         timerDisplay.textContent = "Durasi: 00:00";
-        
-        if (timerInterval) {
-            clearInterval(timerInterval);
-        }
-
+        if (timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(() => {
             seconds++;
             const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -30,11 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function stopTimer() {
-        if (timerInterval) {
-            clearInterval(timerInterval);
-        }
+        if (timerInterval) clearInterval(timerInterval);
     }
 
+    // --- Event Listeners untuk Setup ---
     randomNameBtn.addEventListener('click', async () => {
         try {
             const response = await fetch('/api/get-random-name');
@@ -78,10 +80,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(errorData.error || 'Gagal membuat puzzle dari server');
             }
             
-            const puzzleData = await response.json();
+            const data = await response.json();
 
-            if (puzzleData && puzzleData.grid && puzzleData.clues) {
-                renderPuzzle(puzzleData);
+            if (data && data.grid && data.clues) {
+                puzzleData = data;
+                renderPuzzle();
                 loadingSpinner.classList.add('hidden');
                 gameScreen.classList.remove('hidden');
                 gameScoreDisplay.classList.add('hidden');
@@ -93,30 +96,23 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
         } catch (error) {
-            alert(`Terjadi kesalahan: ${error.message}`);
+            Swal.fire('Error!', `Terjadi kesalahan: ${error.message}`, 'error');
             loadingSpinner.classList.add('hidden');
             setupScreen.classList.remove('hidden');
         }
     });
 
+    // --- Logika Penyelesaian Game ---
     finishGameBtn.addEventListener('click', () => {
         if (gameFinished) {
             window.location.reload();
             return;
         }
 
-        // --- VALIDASI BARU: Cek apakah ada jawaban yang diisi ---
         const inputs = document.querySelectorAll('#crossword-grid input');
-        let hasAnswer = false;
-        for (const input of inputs) {
-            if (input.value.trim() !== '') {
-                hasAnswer = true;
-                break;
-            }
-        }
+        let hasAnswer = Array.from(inputs).some(input => input.value.trim() !== '');
 
         if (!hasAnswer) {
-            // --- PESAN ERROR SEMENTARA DENGAN SWEETALERT ---
             Swal.fire({
                 icon: 'error',
                 title: 'Gagal Menyelesaikan',
@@ -128,25 +124,23 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // --- PESAN KONFIRMASI DENGAN SWEETALERT ---
         Swal.fire({
             title: 'Selesaikan Permainan?',
             text: "Apakah Anda yakin? Jawaban akan diperiksa dan permainan akan berakhir.",
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#42b72a',
+            confirmButtonColor: '#28a745',
             cancelButtonColor: '#d33',
             confirmButtonText: 'Ya, selesaikan!',
             cancelButtonText: 'Batal'
         }).then(async (result) => {
             if (result.isConfirmed) {
-                // Jika pengguna menekan "Ya", jalankan logika pengecekan
                 stopTimer();
                 finishGameBtn.disabled = true;
                 finishGameBtn.textContent = "Memeriksa...";
 
                 const userGrid = [];
-                const size = Math.sqrt(document.querySelectorAll('#crossword-grid .grid-cell').length);
+                const size = puzzleData.grid.length;
                 
                 for (let i = 0; i < size; i++) {
                     userGrid.push(new Array(size).fill(null));
@@ -165,9 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         body: JSON.stringify({ grid: userGrid })
                     });
 
-                    if (!response.ok) {
-                        throw new Error("Gagal memeriksa jawaban di server.");
-                    }
+                    if (!response.ok) throw new Error("Gagal memeriksa jawaban di server.");
 
                     const resultData = await response.json();
                     
@@ -177,12 +169,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         const col = parseInt(input.dataset.col, 10);
                         
                         input.classList.remove('correct', 'incorrect');
-
-                        if (resultGrid[row][col] === 'correct') {
-                            input.classList.add('correct');
-                        } else if (resultGrid[row][col] === 'incorrect') {
-                            input.classList.add('incorrect');
-                        }
+                        if (resultGrid[row][col] === 'correct') input.classList.add('correct');
+                        else if (resultGrid[row][col] === 'incorrect') input.classList.add('incorrect');
                         input.disabled = true;
                     });
 
@@ -213,33 +201,192 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    function renderPuzzle(data) {
-        const gridEl = document.getElementById('crossword-grid');
-        const size = data.grid ? data.grid.length : 0;
-        if (size === 0) {
-            console.error("Data grid kosong atau tidak valid.");
-            return;
+    // --- Logika Interaksi Grid dan Petunjuk ---
+
+    function highlightCellsAndClues() {
+        document.querySelectorAll('.current-focus, .current-word, .current-clue').forEach(el => {
+            el.classList.remove('current-focus', 'current-word', 'current-clue');
+        });
+
+        if (currentFocus.row === null) return;
+
+        const { acrossWord, downWord, acrossClueEl, downClueEl } = findWordsAndClues(currentFocus.row, currentFocus.col);
+
+        if (currentFocus.direction === 'across' && acrossWord) {
+            acrossWord.cells.forEach(cell => cell.classList.add('current-word'));
+            if (acrossClueEl) acrossClueEl.classList.add('current-clue');
+        } else if (currentFocus.direction === 'down' && downWord) {
+            downWord.cells.forEach(cell => cell.classList.add('current-word'));
+            if (downClueEl) downClueEl.classList.add('current-clue');
         }
+
+        const activeCell = document.querySelector(`input[data-row='${currentFocus.row}'][data-col='${currentFocus.col}']`);
+        if (activeCell) {
+            activeCell.parentElement.classList.add('current-focus');
+            activeCell.focus();
+        }
+    }
+
+    function findWordsAndClues(row, col) {
+        let acrossWord = null, downWord = null, acrossClueEl = null, downClueEl = null;
+
+        puzzleData.clues.across.forEach(clue => {
+            const wordLength = getWordLength(clue.number, 'across');
+            if (row === clue.row && col >= clue.col && col < clue.col + wordLength) {
+                acrossWord = { clue, cells: [] };
+                for (let i = 0; i < wordLength; i++) {
+                    const cell = document.querySelector(`input[data-row='${clue.row}'][data-col='${clue.col + i}']`);
+                    if (cell) acrossWord.cells.push(cell.parentElement);
+                }
+                acrossClueEl = document.querySelector(`#across-clues li[data-number='${clue.number}']`);
+            }
+        });
+
+        puzzleData.clues.down.forEach(clue => {
+            const wordLength = getWordLength(clue.number, 'down');
+            if (col === clue.col && row >= clue.row && row < clue.row + wordLength) {
+                downWord = { clue, cells: [] };
+                for (let i = 0; i < wordLength; i++) {
+                    const cell = document.querySelector(`input[data-row='${clue.row + i}'][data-col='${clue.col}']`);
+                    if (cell) downWord.cells.push(cell.parentElement);
+                }
+                downClueEl = document.querySelector(`#down-clues li[data-number='${clue.number}']`);
+            }
+        });
+
+        return { acrossWord, downWord, acrossClueEl, downClueEl };
+    }
+
+    function getWordLength(number, direction) {
+        const grid = puzzleData.grid;
+        const size = grid.length;
+        const clue = puzzleData.clues[direction].find(c => c.number === number);
+        if (!clue) return 0;
+
+        let length = 0;
+        if (direction === 'across') {
+            for (let c = clue.col; c < size && grid[clue.row][c] !== null; c++) length++;
+        } else {
+            for (let r = clue.row; r < size && grid[r][clue.col] !== null; r++) length++;
+        }
+        return length;
+    }
+
+    // --- EVENT LISTENER YANG DIPERBAIKI ---
+    gridContainer.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'INPUT') return;
+
+        const row = parseInt(e.target.dataset.row);
+        const col = parseInt(e.target.dataset.col);
+
+        const { acrossWord, downWord } = findWordsAndClues(row, col);
+
+        if (currentFocus.row === row && currentFocus.col === col) {
+            // --- LOGIKA TOGGLE BARU ---
+            // Jika sedang mendatar dan ada kata menurun, ganti ke menurun.
+            if (currentFocus.direction === 'across' && downWord) {
+                currentFocus.direction = 'down';
+            // Jika sedang menurun dan ada kata mendatar, ganti ke mendatar.
+            } else if (currentFocus.direction === 'down' && acrossWord) {
+                currentFocus.direction = 'across';
+            }
+        } else {
+            // --- LOGIKA KLIK BARU ---
+            currentFocus.row = row;
+            currentFocus.col = col;
+            // Default ke mendatar jika ada, jika tidak baru ke menurun.
+            if (acrossWord) {
+                currentFocus.direction = 'across';
+            } else if (downWord) {
+                currentFocus.direction = 'down';
+            }
+        }
+        highlightCellsAndClues();
+    });
+
+    gridContainer.addEventListener('keydown', (e) => {
+        if (currentFocus.row === null || gameFinished) return;
+        let { row, col, direction } = currentFocus;
+        const size = puzzleData.grid.length;
+        
+        const key = e.key;
+        if (key.length === 1 && key.match(/[a-z0-9]/i)) {
+            setTimeout(() => {
+                if (direction === 'across' && col + 1 < size) {
+                    const nextInput = document.querySelector(`input[data-row='${row}'][data-col='${col + 1}']`);
+                    if (nextInput) {
+                        currentFocus.col++;
+                        highlightCellsAndClues();
+                    }
+                } else if (direction === 'down' && row + 1 < size) {
+                    const nextInput = document.querySelector(`input[data-row='${row + 1}'][data-col='${col}']`);
+                    if (nextInput) {
+                        currentFocus.row++;
+                        highlightCellsAndClues();
+                    }
+                }
+            }, 0);
+        } else if (key === 'ArrowUp') { e.preventDefault(); if (row > 0) currentFocus.row--; }
+        else if (key === 'ArrowDown') { e.preventDefault(); if (row < size - 1) currentFocus.row++; }
+        else if (key === 'ArrowLeft') { e.preventDefault(); if (col > 0) currentFocus.col--; }
+        else if (key === 'ArrowRight') { e.preventDefault(); if (col < size - 1) currentFocus.col++; }
+        else if (key === 'Backspace' && e.target.value === '') {
+             setTimeout(() => {
+                if (direction === 'across' && col > 0) {
+                    const prevInput = document.querySelector(`input[data-row='${row}'][data-col='${col - 1}']`);
+                    if (prevInput) {
+                        currentFocus.col--;
+                        highlightCellsAndClues();
+                    }
+                } else if (direction === 'down' && row > 0) {
+                    const prevInput = document.querySelector(`input[data-row='${row - 1}'][data-col='${col}']`);
+                    if (prevInput) {
+                        currentFocus.row--;
+                        highlightCellsAndClues();
+                    }
+                }
+            }, 0);
+        }
+
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
+            highlightCellsAndClues();
+        }
+    });
+
+    function addClueClickListener(listElement) {
+        listElement.addEventListener('click', (e) => {
+            const li = e.target.closest('li');
+            if (li) {
+                currentFocus.row = parseInt(li.dataset.row);
+                currentFocus.col = parseInt(li.dataset.col);
+                currentFocus.direction = li.parentElement.parentElement.id === 'across-clues' ? 'across' : 'down';
+                highlightCellsAndClues();
+            }
+        });
+    }
+    addClueClickListener(acrossCluesList);
+    addClueClickListener(downCluesList);
+
+    // --- Fungsi Render ---
+    function renderPuzzle() {
+        const gridEl = document.getElementById('crossword-grid');
+        const size = puzzleData.grid.length;
 
         gridEl.innerHTML = '';
-        gridEl.style.gridTemplateColumns = `repeat(${size}, 35px)`;
-        gridEl.style.gridTemplateRows = `repeat(${size}, 35px)`;
+        gridEl.style.gridTemplateColumns = `repeat(${size}, 38px)`;
+        gridEl.style.gridTemplateRows = `repeat(${size}, 38px)`;
 
         const clueNumbersMap = {};
-        if (data.clues && data.clues.across) {
-            data.clues.across.forEach(clue => {
-                const key = `${clue.row},${clue.col}`;
-                if (!clueNumbersMap[key]) clueNumbersMap[key] = clue.number;
-            });
-        }
-        if (data.clues && data.clues.down) {
-            data.clues.down.forEach(clue => {
-                const key = `${clue.row},${clue.col}`;
-                if (!clueNumbersMap[key]) clueNumbersMap[key] = clue.number;
-            });
-        }
+        puzzleData.clues.across.forEach(clue => {
+            const key = `${clue.row},${clue.col}`;
+            if (!clueNumbersMap[key]) clueNumbersMap[key] = clue.number;
+        });
+        puzzleData.clues.down.forEach(clue => {
+            const key = `${clue.row},${clue.col}`;
+            if (!clueNumbersMap[key]) clueNumbersMap[key] = clue.number;
+        });
 
-        data.grid.forEach((row, r_idx) => {
+        puzzleData.grid.forEach((row, r_idx) => {
             row.forEach((cell, c_idx) => {
                 const cellEl = document.createElement('div');
                 cellEl.classList.add('grid-cell');
@@ -264,24 +411,24 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        const acrossList = document.querySelector('#across-clues ul');
-        const downList = document.querySelector('#down-clues ul');
-        acrossList.innerHTML = '';
-        downList.innerHTML = '';
-
-        if (data.clues && data.clues.across) {
-            data.clues.across.forEach(c => {
-                const li = document.createElement('li');
-                li.textContent = `${c.number}. ${c.clue}`;
-                acrossList.appendChild(li);
-            });
-        }
-        if (data.clues && data.clues.down) {
-            data.clues.down.forEach(c => {
-                const li = document.createElement('li');
-                li.textContent = `${c.number}. ${c.clue}`;
-                downList.appendChild(li);
-            });
-        }
+        acrossCluesList.innerHTML = '';
+        puzzleData.clues.across.forEach(c => {
+            const li = document.createElement('li');
+            li.textContent = `${c.number}. ${c.clue}`;
+            li.dataset.number = c.number;
+            li.dataset.row = c.row;
+            li.dataset.col = c.col;
+            acrossCluesList.appendChild(li);
+        });
+        
+        downCluesList.innerHTML = '';
+        puzzleData.clues.down.forEach(c => {
+            const li = document.createElement('li');
+            li.textContent = `${c.number}. ${c.clue}`;
+            li.dataset.number = c.number;
+            li.dataset.row = c.row;
+            li.dataset.col = c.col;
+            downCluesList.appendChild(li);
+        });
     }
 });
