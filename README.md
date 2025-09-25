@@ -1,7 +1,6 @@
 # Qrossword - Teka Teki Quiz Cerdas
 
-![Tampilan Gameplay Qrossword](path/to/your/gameplay-screenshot.png)
-*(Ganti `path/to/your/gameplay-screenshot.png` dengan screenshot aplikasi Anda yang sedang berjalan)*
+![Tampilan Gameplay Qrossword](https://github.com/fahroediin/tts-gemini-app/blob/main/demo/demo.png)
 
 Sebuah web app Teka-Teki Silang (TTS) modern yang kontennya dihasilkan secara dinamis oleh AI (Google Gemini). Proyek ini dirancang dengan fokus pada pengalaman pengguna yang cepat dan interaktif, menggunakan mekanisme caching di latar belakang untuk menghilangkan waktu tunggu saat membuat puzzle baru.
 
