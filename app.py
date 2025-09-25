@@ -64,9 +64,11 @@ def create_app():
                 try:
                     current_stock = database.get_puzzle_stock_count(theme)
                     print(f"SCHEDULER: Stok untuk '{theme}': {current_stock}")
-                    if current_stock <= background_generator.MIN_STOCK:
+                    
+                    # Jalankan jika stok KURANG DARI batas minimal
+                    if current_stock < background_generator.MIN_STOCK:
                         needed = background_generator.TARGET_STOCK - current_stock
-                        print(f"SCHEDULER: Stok '{theme}' rendah. Generate {needed} puzzle baru.")
+                        print(f"SCHEDULER: Stok '{theme}' rendah ({current_stock}). Generate {needed} puzzle baru untuk mencapai {background_generator.TARGET_STOCK}.")
                         for i in range(needed):
                             print(f"SCHEDULER: Generate puzzle ke-{i+1}/{needed} untuk '{theme}'...")
                             words_data = ai_generator.generate_crossword_data(theme, 25)
@@ -78,12 +80,15 @@ def create_app():
                             else:
                                 print(f"SCHEDULER: Gagal generate kata untuk '{theme}'.")
                             time.sleep(5)
+                    else:
+                        print(f"SCHEDULER: Stok untuk '{theme}' cukup ({current_stock}). Tidak ada tindakan.")
+
                 except Exception as e:
                     print(f"SCHEDULER: Error saat memeriksa '{theme}': {e}")
         
         background_generator.check_and_refill_stock = new_check_and_refill_stock
         
-        print("SERVER STARTUP: Memulai pengisian stok awal...")
+        print("SERVER STARTUP: Memulai pengecekan dan pengisian stok awal...")
         background_generator.check_and_refill_stock()
         print("SERVER STARTUP: Pengisian stok awal selesai.")
 
@@ -179,9 +184,9 @@ def create_app():
         return jsonify({"success": True})
 
     scheduler = BackgroundScheduler(daemon=True)
-    scheduler.add_job(background_generator.check_and_refill_stock, 'interval', minutes=5)
+    scheduler.add_job(background_generator.check_and_refill_stock, 'interval', hours=12)
     scheduler.start()
-    print("SERVER STARTUP: Scheduler latar belakang telah dimulai.")
+    print("SERVER STARTUP: Scheduler latar belakang telah dimulai, akan memeriksa stok setiap 12 jam.")
     
     atexit.register(lambda: scheduler.shutdown())
     

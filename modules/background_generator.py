@@ -1,6 +1,6 @@
 # Konstanta untuk proses refill
-MIN_STOCK = 2
-TARGET_STOCK = 5
+MIN_STOCK = 5       # Pemicu refill jika stok di bawah angka ini
+TARGET_STOCK = 10   # Jumlah puzzle yang kita inginkan per kategori
 
 def check_and_refill_stock():
     # Fungsi ini sengaja dibiarkan kosong.

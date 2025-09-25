@@ -22,7 +22,7 @@ body {
     text-align: center;
 }
 
-/* --- STYLING HEADER BARU --- */
+/* Header Styling */
 .main-header {
     background: linear-gradient(135deg, #f8f9fa, #e9ecef);
     padding: 20px 30px;
@@ -45,10 +45,9 @@ body {
 
 .main-header i {
     color: #007bff;
-    font-size: 0.9em; /* Sedikit lebih kecil dari teks */
-    margin-bottom: 5px; /* Menyesuaikan posisi vertikal */
+    font-size: 0.9em;
+    margin-bottom: 5px;
 }
-/* ------------------------- */
 
 h2, h3 {
     color: #1c1e21;
@@ -270,6 +269,16 @@ button:disabled {
     font-size: 1.2em;
     font-weight: bold;
     padding: 40px;
+}
+
+/* --- STYLING FOOTER BARU --- */
+footer {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #e4e6eb;
+    font-size: 0.9em;
+    color: #6c757d;
+    text-align: center;
 }
 
 /* Responsive Design for Mobile */
