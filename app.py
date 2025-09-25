@@ -126,24 +126,35 @@ def create_app():
 
         correct_cells = 0
         total_cells = 0
-        
+        result_grid = [[None for _ in range(len(solution_grid))] for _ in range(len(solution_grid))]
+
         for r in range(len(solution_grid)):
             for c in range(len(solution_grid[r])):
-                if solution_grid[r][c] is not None:
+                solution_char = solution_grid[r][c]
+                user_char = user_grid[r][c]
+
+                if solution_char is not None:
                     total_cells += 1
-                    if user_grid[r][c] and user_grid[r][c].upper() == solution_grid[r][c]:
+                    is_correct = user_char and user_char.upper() == solution_char
+                    
+                    if is_correct:
                         correct_cells += 1
+                        result_grid[r][c] = 'correct'
+                    else:
+                        result_grid[r][c] = 'incorrect'
         
+        accuracy_score = correct_cells * 100
+        completion_bonus = 5000 if correct_cells == total_cells and total_cells > 0 else 0
         time_taken = time.time() - start_time
-        accuracy_score = (correct_cells / total_cells) * 10000 if total_cells > 0 else 0
-        time_bonus = max(0, 300 - time_taken) * 10
+        time_bonus = max(0, 600 - time_taken) * 5
         
-        final_score = int(accuracy_score + time_bonus)
+        final_score = int(accuracy_score + completion_bonus + time_bonus)
 
         return jsonify({
             "score": final_score,
             "correct_cells": correct_cells,
-            "total_cells": total_cells
+            "total_cells": total_cells,
+            "result_grid": result_grid
         })
 
     @app.route('/api/get-random-name', methods=['GET'])

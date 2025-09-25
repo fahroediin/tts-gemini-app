@@ -1,15 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
     const setupScreen = document.getElementById('setup-screen');
     const gameScreen = document.getElementById('game-screen');
-    const endScreen = document.getElementById('end-screen');
     const loadingSpinner = document.getElementById('loading-spinner');
     
     const startGameBtn = document.getElementById('start-game-btn');
     const randomNameBtn = document.getElementById('random-name-btn');
     const finishGameBtn = document.getElementById('finish-game-btn');
-    const submitFeedbackBtn = document.getElementById('submit-feedback-btn');
+    const gameScoreDisplay = document.getElementById('game-score-display');
 
     let userSettings = {};
+    let gameFinished = false;
 
     randomNameBtn.addEventListener('click', async () => {
         try {
@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const theme = document.getElementById('theme-select').value;
         userSettings = { name: playerName, theme };
+        gameFinished = false;
 
         setupScreen.classList.add('hidden');
         loadingSpinner.classList.remove('hidden');
@@ -59,6 +60,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderPuzzle(puzzleData);
                 loadingSpinner.classList.add('hidden');
                 gameScreen.classList.remove('hidden');
+                gameScoreDisplay.classList.add('hidden');
+                finishGameBtn.textContent = "Selesai & Cek Jawaban";
+                finishGameBtn.disabled = false;
             } else {
                 throw new Error("Data puzzle yang diterima tidak valid.");
             }
@@ -71,6 +75,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     finishGameBtn.addEventListener('click', async () => {
+        if (gameFinished) {
+            window.location.reload();
+            return;
+        }
+
+        finishGameBtn.disabled = true;
+        finishGameBtn.textContent = "Memeriksa...";
+
         const userGrid = [];
         const inputs = document.querySelectorAll('#crossword-grid input');
         const size = Math.sqrt(document.querySelectorAll('#crossword-grid .grid-cell').length);
@@ -97,39 +109,43 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const result = await response.json();
-            const score = result.score;
+            
+            const resultGrid = result.result_grid;
+            inputs.forEach(input => {
+                const row = parseInt(input.dataset.row, 10);
+                const col = parseInt(input.dataset.col, 10);
+                
+                input.classList.remove('correct', 'incorrect');
+
+                if (resultGrid[row][col] === 'correct') {
+                    input.classList.add('correct');
+                } else if (resultGrid[row][col] === 'incorrect') {
+                    input.classList.add('incorrect');
+                }
+                input.disabled = true;
+            });
+
+            gameScoreDisplay.textContent = `Skor Anda: ${result.score}`;
+            gameScoreDisplay.classList.remove('hidden');
 
             await fetch('/api/submit-score', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name: userSettings.name,
-                    score: score,
+                    score: result.score,
                     theme: userSettings.theme
                 })
             });
 
-            document.getElementById('final-score').textContent = score;
-            await showLeaderboard();
-            
-            gameScreen.classList.add('hidden');
-            endScreen.classList.remove('hidden');
+            finishGameBtn.textContent = "Main Lagi";
+            finishGameBtn.disabled = false;
+            gameFinished = true;
 
         } catch (error) {
             alert(`Terjadi kesalahan saat menyelesaikan game: ${error.message}`);
-        }
-    });
-
-    submitFeedbackBtn.addEventListener('click', async () => {
-        const suggestion = document.getElementById('feedback-box').value;
-        if (suggestion) {
-            await fetch('/api/submit-feedback', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ suggestion })
-            });
-            alert('Terima kasih atas saran Anda!');
-            document.getElementById('feedback-box').value = '';
+            finishGameBtn.disabled = false;
+            finishGameBtn.textContent = "Selesai & Cek Jawaban";
         }
     });
 
@@ -202,22 +218,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 li.textContent = `${c.number}. ${c.clue}`;
                 downList.appendChild(li);
             });
-        }
-    }
-
-    async function showLeaderboard() {
-        try {
-            const response = await fetch('/api/leaderboard');
-            const scores = await response.json();
-            const listEl = document.getElementById('leaderboard-list');
-            listEl.innerHTML = '';
-            scores.forEach(score => {
-                const li = document.createElement('li');
-                li.textContent = `${score[0]} - ${score[1]}`;
-                listEl.appendChild(li);
-            });
-        } catch (error) {
-            console.error("Gagal memuat leaderboard:", error);
         }
     }
 });

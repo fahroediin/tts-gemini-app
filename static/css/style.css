@@ -69,6 +69,11 @@ button:hover {
     background-color: #166fe5;
 }
 
+button:disabled {
+    background-color: #9dbef2;
+    cursor: not-allowed;
+}
+
 #random-name-btn {
     background-color: #6c757d;
 }
@@ -95,10 +100,12 @@ button:hover {
     height: 35px;
     border: 1px solid #ccc;
     position: relative;
+    background-color: white;
 }
 
 .grid-cell.black {
     background-color: #2c2c2c;
+    border: 1px solid #2c2c2c;
 }
 
 .grid-cell input {
@@ -110,13 +117,17 @@ button:hover {
     font-weight: bold;
     text-transform: uppercase;
     padding: 0;
-    background-color: #fff;
+    background-color: transparent;
     color: #1c1e21;
 }
 
 .grid-cell input:focus {
     outline: 2px solid #1877f2;
     background-color: #e7f3ff;
+}
+
+.grid-cell input:disabled {
+    background-color: transparent;
 }
 
 .clue-number {
@@ -126,6 +137,7 @@ button:hover {
     font-size: 0.6em;
     font-weight: bold;
     color: #555;
+    z-index: 1;
 }
 
 #clues-container {
@@ -161,28 +173,43 @@ button:hover {
     background-color: #36a420;
 }
 
-/* End Screen Styling */
-#leaderboard-list {
-    list-style-position: inside;
-    padding: 0;
-    max-width: 300px;
-    margin: 15px auto;
-    text-align: left;
-}
-
-#feedback-box {
-    width: 100%;
-    max-width: 400px;
-    height: 80px;
-    padding: 10px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    margin-top: 10px;
-}
-
 /* Loading Spinner */
 #loading-spinner {
     font-size: 1.2em;
     font-weight: bold;
     padding: 40px;
+}
+
+/* Feedback Styling */
+.grid-cell input.correct {
+    background-color: #c8e6c9; /* Hijau muda */
+    color: #2e7d32;
+    animation: pulse-green 0.5s;
+}
+
+.grid-cell input.incorrect {
+    background-color: #ffcdd2; /* Merah muda */
+    color: #c62828;
+    animation: shake 0.5s;
+}
+
+/* Animasi */
+@keyframes pulse-green {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* Styling untuk menampilkan skor di layar game */
+#game-score-display {
+    margin-top: 20px;
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #1877f2;
 }
