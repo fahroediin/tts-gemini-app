@@ -1,5 +1,8 @@
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from werkzeug.security import check_password_hash
 from modules import ai_generator, database, name_generator, background_generator, grid_builder
+from modules.user import User # Import class User baru
 import os
 import time
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -7,34 +10,76 @@ import atexit
 import json
 
 def number_and_format_puzzle(grid, placed_words):
+    """Fungsi untuk melakukan penomoran dan memformat output akhir."""
     if not grid or not placed_words:
         return None
+
     clue_positions = {}
     clue_counter = 1
+    
     placed_words.sort(key=lambda w: (w['row'], w['col']))
+    
     clues_across = []
     clues_down = []
+    
     for word_info in placed_words:
         row, col = word_info['row'], word_info['col']
         pos_key = f"{row},{col}"
+        
         if pos_key not in clue_positions:
             clue_positions[pos_key] = clue_counter
             clue_counter += 1
+        
         number = clue_positions[pos_key]
-        formatted_clue = {"number": number, "clue": word_info['clue'], "row": row, "col": col}
+        
+        formatted_clue = {
+            "number": number,
+            "clue": word_info['clue'],
+            "row": row,
+            "col": col
+        }
+        
         if word_info['direction'] == 'across':
             clues_across.append(formatted_clue)
         else:
             clues_down.append(formatted_clue)
+            
     final_grid = [[char if char else None for char in row] for row in grid]
-    return {"grid": final_grid, "clues": {"across": clues_across, "down": clues_down}}
+            
+    return {
+        "grid": final_grid,
+        "clues": {
+            "across": clues_across,
+            "down": clues_down
+        }
+    }
 
 def create_app():
     app = Flask(__name__)
     app.secret_key = os.urandom(24)
 
+    # --- KONFIGURASI ADMIN ---
+    # Ganti dengan hash yang Anda generate dari create_admin.py
+    app.config['ADMIN_USERNAME'] = 'admin'
+    app.config['ADMIN_PASSWORD_HASH'] = 'pbkdf2:sha256:1000000$a4ytLuzEzNcpuivT$5d30a7f3bcbbbb6ba2b975f29877a1431825e901d1029b29fd5eb9c0d6e12e49' # <-- PASTE HASH ANDA DI SINI
+
+    # --- SETUP FLASK-LOGIN ---
+    login_manager = LoginManager()
+    login_manager.init_app(app)
+    login_manager.login_view = 'login' # Redirect ke halaman login jika belum login
+    login_manager.login_message = "Anda harus login untuk mengakses halaman ini."
+    login_manager.login_message_category = "info"
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        if user_id == app.config['ADMIN_USERNAME']:
+            return User(user_id)
+        return None
+    # -------------------------
+
     with app.app_context():
         database.init_db()
+        
         def new_check_and_refill_stock():
             print("SCHEDULER: Memeriksa stok puzzle...")
             for theme in database.CATEGORIES:
@@ -57,20 +102,55 @@ def create_app():
                             time.sleep(5)
                 except Exception as e:
                     print(f"SCHEDULER: Error saat memeriksa '{theme}': {e}")
+        
         background_generator.check_and_refill_stock = new_check_and_refill_stock
+        
         print("SERVER STARTUP: Memulai pengisian stok awal...")
         background_generator.check_and_refill_stock()
         print("SERVER STARTUP: Pengisian stok awal selesai.")
 
+    # --- Rute Publik ---
     @app.route('/')
     def index():
         return render_template('index.html')
 
+    # --- Rute Otorisasi ---
+    @app.route('/login', methods=['GET', 'POST'])
+    def login():
+        if current_user.is_authenticated:
+            return redirect(url_for('dashboard'))
+        
+        if request.method == 'POST':
+            username = request.form.get('username')
+            password = request.form.get('password')
+            
+            if (username == app.config['ADMIN_USERNAME'] and 
+                check_password_hash(app.config['ADMIN_PASSWORD_HASH'], password)):
+                user = User(username)
+                login_user(user)
+                # Arahkan ke halaman yang dituju sebelumnya, atau ke dashboard
+                next_page = request.args.get('next')
+                return redirect(next_page or url_for('dashboard'))
+            else:
+                flash('Username atau password salah.', 'danger')
+        
+        return render_template('login.html')
+
+    @app.route('/logout')
+    @login_required
+    def logout():
+        logout_user()
+        flash('Anda telah berhasil logout.', 'success')
+        return redirect(url_for('login'))
+
+    # --- Rute yang Dilindungi ---
     @app.route('/dashboard')
+    @login_required
     def dashboard():
         return render_template('dashboard.html')
 
     @app.route('/api/dashboard-data')
+    @login_required
     def dashboard_data():
         feedback = database.get_all_feedback()
         theme_popularity = database.get_theme_popularity()
@@ -81,14 +161,7 @@ def create_app():
             "access_logs": [{"player_name": l[0], "theme": l[1], "timestamp": l[2]} for l in access_logs]
         })
 
-    @app.route('/api/log-start', methods=['POST'])
-    def log_start():
-        data = request.json
-        if data.get('name') and data.get('theme'):
-            database.log_access(data['name'], data['theme'])
-            return jsonify({"success": True}), 200
-        return jsonify({"error": "Data tidak lengkap"}), 400
-
+    # --- API Publik ---
     @app.route('/api/generate-puzzle', methods=['POST'])
     def generate_puzzle():
         theme = request.json.get('theme', 'Umum')
@@ -130,6 +203,14 @@ def create_app():
         final_score = int(accuracy_score + completion_bonus + time_bonus)
         return jsonify({"score": final_score, "result_grid": result_grid})
 
+    @app.route('/api/log-start', methods=['POST'])
+    def log_start():
+        data = request.json
+        if data.get('name') and data.get('theme'):
+            database.log_access(data['name'], data['theme'])
+            return jsonify({"success": True}), 200
+        return jsonify({"error": "Data tidak lengkap"}), 400
+
     @app.route('/api/get-random-name', methods=['GET'])
     def get_random_name(): return jsonify({"name": name_generator.generate_random_name()})
 
@@ -148,6 +229,7 @@ def create_app():
         database.add_feedback(data.get('suggestion'))
         return jsonify({"success": True})
 
+    # --- Penjadwal Latar Belakang ---
     scheduler = BackgroundScheduler(daemon=True)
     scheduler.add_job(background_generator.check_and_refill_stock, 'interval', hours=12)
     scheduler.start()
