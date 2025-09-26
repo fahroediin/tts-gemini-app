@@ -8,10 +8,11 @@ Sebuah web app Teka-Teki Silang (TTS) modern yang kontennya dihasilkan secara di
 
 *   ✅ **Konten Dinamis oleh AI:** Setiap puzzle unik dan dibuat oleh Google Gemini API berdasarkan tema yang dipilih.
 *   ⚡ **Pemuatan Instan:** Mekanisme caching di latar belakang membuat stok puzzle di database, sehingga pengguna mendapatkan puzzle baru secara instan tanpa menunggu AI.
+*   📊 **Dashboard Admin:** Halaman admin yang dilindungi password untuk memonitor penggunaan aplikasi, melihat saran dari pengguna, dan menganalisis popularitas tema.
 *   🖥️ **Dashboard Interaktif:** Layout *side-by-side* yang modern menampilkan grid dan petunjuk secara bersamaan, menghilangkan kebutuhan untuk menggulir (scroll).
 *   🔦 **Highlighting Cerdas:** Mengklik sel di grid akan menyorot kata dan petunjuk yang relevan, dan sebaliknya.
 *   ⌨️ **Navigasi Penuh:** Dukungan penuh untuk navigasi keyboard (tombol panah) dan auto-advance saat mengetik.
-*   🎨 **Umpan Balik Visual:** Pengecekan jawaban secara instan dengan animasi merah (salah) dan hijau (benar) tanpa berpindah halaman.
+*   🎨 **Umpan Balik Visual:** Pengecekan jawaban secara instan dengan umpan balik visual tanpa berpindah halaman.
 *   🏆 **Sistem Skor yang Adil:** Skor dihitung berdasarkan akurasi, bonus penyelesaian, dan bonus kecepatan.
 *   🔔 **Notifikasi Modern:** Menggunakan SweetAlert2 untuk dialog konfirmasi dan notifikasi yang elegan.
 *   🦕 **Generator Nama Acak:** Fitur kecil yang menyenangkan untuk pengguna yang tidak ingin memasukkan nama.
@@ -21,11 +22,11 @@ Sebuah web app Teka-Teki Silang (TTS) modern yang kontennya dihasilkan secara di
 
 | Kategori | Teknologi |
 | :--- | :--- |
-| **Backend** | Python, Flask, APScheduler |
+| **Backend** | Python, Flask, APScheduler, **Flask-Login** |
 | **Frontend** | HTML5, CSS3, Vanilla JavaScript |
 | **AI Model** | Google Gemini API |
 | **Database** | SQLite |
-| **UI Library** | SweetAlert2, Font Awesome |
+| **UI Library** | SweetAlert2, Font Awesome, **Chart.js** |
 
 ## 🏛️ Cara Kerja Arsitektur
 
@@ -41,8 +42,6 @@ Proyek ini menggunakan arsitektur hibrida yang cerdas untuk memisahkan proses ya
 [Pengguna Meminta Puzzle] -> [Flask App] -> [Ambil Puzzle dari Cache] -> [Tampilkan ke Pengguna]
 ```
 
-Dengan cara ini, AI bekerja di belakang layar untuk mengisi "gudang" puzzle, dan pengguna selalu dilayani dari gudang yang sudah terisi penuh.
-
 ## 🚀 Panduan Instalasi dan Menjalankan
 
 Ikuti langkah-langkah ini untuk menjalankan proyek di mesin lokal Anda.
@@ -53,8 +52,8 @@ Ikuti langkah-langkah ini untuk menjalankan proyek di mesin lokal Anda.
 
 ### 2. Kloning Repositori
 ```bash
-git clone https://github.com/your-username/qrossword-app.git
-cd qrossword-app
+git clone https://github.com/fahroediin/tts-gemini-app.git
+cd tts-gemini-app
 ```
 
 ### 3. Siapkan Lingkungan Virtual (Direkomendasikan)
@@ -73,13 +72,24 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 5. Konfigurasi API Key
+### 5. Konfigurasi Kunci API & Password Admin
+
+#### a. Konfigurasi Kunci API Gemini
 1.  Dapatkan API Key Anda dari [Google AI Studio](https://aistudio.google.com/).
 2.  Buat file baru di folder utama proyek bernama `.env`.
 3.  Salin dan tempel konten berikut ke dalam file `.env`, ganti dengan API Key Anda:
     ```
     GEMINI_API_KEY="MASUKKAN_API_KEY_ANDA_DI_SINI"
     ```
+
+#### b. Konfigurasi Password Admin
+1.  Jalankan skrip `create_admin.py` untuk membuat password hash yang aman:
+    ```bash
+    python create_admin.py
+    ```
+    *(Anda bisa mengubah password di dalam file `create_admin.py` sebelum menjalankannya)*
+2.  Skrip akan menghasilkan sebuah string hash. **Salin seluruh string tersebut.**
+3.  Buka file `app.py` dan tempel hash yang baru saja Anda salin ke dalam `app.config['ADMIN_PASSWORD_HASH']`.
 
 ### 6. Jalankan Aplikasi
 1.  Hapus file `crossword.db` jika ada untuk memulai dari awal yang bersih.
@@ -88,26 +98,48 @@ pip install -r requirements.txt
     flask run
     ```
 3.  **Penting:** Saat pertama kali dijalankan, perhatikan terminal. Aplikasi akan mulai mengisi stok puzzle di latar belakang. Proses ini mungkin memakan waktu beberapa menit. Biarkan berjalan hingga Anda melihat pesan `* Running on http://127.0.0.1:5000`.
-4.  Buka browser Anda dan kunjungi `http://127.0.0.1:5000`.
+4.  Buka browser Anda dan kunjungi:
+    *   **Halaman Game:** `http://127.0.0.1:5000`
+    *   **Halaman Login Admin:** `http://127.0.0.1:5000/login`
+
+## 📊 Dashboard Admin
+
+Aplikasi ini dilengkapi dengan dashboard admin yang dilindungi untuk memonitor aktivitas.
+
+*   **Akses:** `http://127.0.0.1:5000/dashboard` (akan dialihkan ke halaman login jika belum masuk).
+*   **Username Default:** `admin`
+*   **Password:** Password yang Anda atur pada langkah 5b.
+
+**Fitur Dashboard:**
+*   **Popularitas Tema:** Diagram lingkaran yang menunjukkan tema mana yang paling sering dimainkan.
+*   **Saran & Masukan:** Tabel berisi semua saran yang dikirimkan oleh pengguna, diurutkan dari yang terbaru.
+*   **Log Akses Terakhir:** Melihat siapa saja yang memulai permainan baru, tema apa yang mereka pilih, dan kapan.
 
 ## 📁 Struktur Proyek
 
 ```
 qrossword-app/
 ├── app.py              # File utama Flask, routing, dan logika inti
+├── create_admin.py     # Skrip untuk membuat password hash admin
 ├── modules/
 │   ├── ai_generator.py   # Logika untuk memanggil Gemini API
 │   ├── background_generator.py # Logika untuk memeriksa & mengisi stok puzzle
 │   ├── database.py       # Fungsi untuk interaksi dengan database SQLite
 │   ├── grid_builder.py   # Algoritma untuk menyusun kata menjadi grid TTS
-│   └── name_generator.py # Fungsi untuk membuat nama dinosaurus random
+│   ├── name_generator.py # Fungsi untuk membuat nama dinosaurus random
+│   └── user.py           # Model User untuk Flask-Login
 ├── static/
 │   ├── css/
-│   │   └── style.css     # Semua styling untuk aplikasi
+│   │   ├── dashboard.css # Styling khusus untuk dashboard
+│   │   └── style.css     # Styling utama untuk game
 │   └── js/
-│       └── main.js       # Semua logika frontend dan interaktivitas
+│       ├── dashboard.js  # Logika frontend untuk dashboard
+│       ├── main.js       # Logika frontend utama (versi modular)
+│       └── modules/      # Modul-modul JavaScript
 ├── templates/
-│   └── index.html        # Halaman utama aplikasi
+│   ├── dashboard.html  # Halaman dashboard admin
+│   ├── index.html      # Halaman utama game
+│   └── login.html      # Halaman login admin
 ├── .env                  # (File yang Anda buat) Menyimpan API Key
 ├── crossword.db        # File database SQLite (dibuat otomatis)
 └── requirements.txt      # Daftar library Python yang dibutuhkan
@@ -115,8 +147,7 @@ qrossword-app/
 
 ## 🔮 Potensi Peningkatan
 
-*   **Simpan Progres:** Memungkinkan pengguna menyimpan permainan yang belum selesai.
-*   **Tingkat Kesulitan:** Menambahkan opsi kesulitan (mudah, sedang, sulit) yang memengaruhi kompleksitas kata.
-*   **Leaderboard Lanjutan:** Filter leaderboard berdasarkan tema atau tanggal.
-*   **Mode Multiplayer:** Mode bermain bersama teman secara real-time.
+*   **Manajemen User:** Dashboard untuk menambah atau mengubah akun admin.
+*   **Analitik Lanjutan:** Grafik tren harian/mingguan untuk jumlah pemain.
+*   **Manajemen Cache:** Tombol di dashboard untuk memaksa pengisian ulang stok puzzle.
 *   **PWA (Progressive Web App):** Membuat aplikasi dapat diinstal di perangkat dan dimainkan secara offline.
