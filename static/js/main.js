@@ -1,134 +1,77 @@
+import * as api from './modules/api.js';
+import { gameState, resetState } from './modules/state.js';
+import { elements, showScreen, renderPuzzle, showLeaderboard } from './modules/ui.js';
+import { initializePuzzleInteraction } from './modules/puzzle.js';
+
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Deklarasi Elemen UI ---
-    const setupScreen = document.getElementById('setup-screen');
-    const gameScreen = document.getElementById('game-screen');
-    const endScreen = document.getElementById('end-screen');
-    const loadingSpinner = document.getElementById('loading-spinner');
-    
     const startGameBtn = document.getElementById('start-game-btn');
     const randomNameBtn = document.getElementById('random-name-btn');
     const finishGameBtn = document.getElementById('finish-game-btn');
     const playAgainBtn = document.getElementById('play-again-btn');
     const submitFeedbackBtn = document.getElementById('submit-feedback-btn');
-    
-    const timerDisplay = document.getElementById('timer-display');
-    const gridContainer = document.getElementById('grid-container');
-    const acrossCluesList = document.querySelector('#across-clues ul');
-    const downCluesList = document.querySelector('#down-clues ul');
 
-    // --- State Management ---
-    let userSettings = {};
-    let gameFinished = false;
-    let timerInterval = null;
-    let currentFocus = { row: null, col: null, direction: 'across' };
-    let puzzleData = {};
-
-    // --- Fungsi Timer ---
-    function startTimer() {
-        let seconds = 0;
-        timerDisplay.textContent = "Durasi: 00:00";
-        if (timerInterval) clearInterval(timerInterval);
-        timerInterval = setInterval(() => {
-            seconds++;
-            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-            const secs = (seconds % 60).toString().padStart(2, '0');
-            timerDisplay.textContent = `Durasi: ${mins}:${secs}`;
-        }, 1000);
-    }
-
-    function stopTimer() {
-        if (timerInterval) clearInterval(timerInterval);
-    }
-
-    // --- Event Listeners untuk Setup ---
+    // --- Setup Listeners ---
     randomNameBtn.addEventListener('click', async () => {
         try {
-            const response = await fetch('/api/get-random-name');
-            const data = await response.json();
-            document.getElementById('player-name').value = data.name;
+            const data = await api.getRandomName();
+            elements.playerNameInput.value = data.name;
         } catch (error) {
             console.error("Gagal mendapatkan nama acak:", error);
         }
     });
 
     startGameBtn.addEventListener('click', async () => {
-        const playerNameInput = document.getElementById('player-name');
-        let playerName = playerNameInput.value;
+        let playerName = elements.playerNameInput.value;
         if (!playerName) {
             try {
-                const response = await fetch('/api/get-random-name');
-                const data = await response.json();
+                const data = await api.getRandomName();
                 playerName = data.name;
-                playerNameInput.value = playerName;
+                elements.playerNameInput.value = playerName;
             } catch (error) {
                 playerName = "Pemain Acak";
             }
         }
         
-        const theme = document.getElementById('theme-select').value;
-        userSettings = { name: playerName, theme };
-        gameFinished = false;
+        const theme = elements.themeSelect.value;
+        gameState.userSettings = { name: playerName, theme };
+        resetState();
+        api.logGameStart(playerName, theme);
 
-        setupScreen.classList.add('hidden');
-        loadingSpinner.classList.remove('hidden');
+        showScreen(elements.loadingSpinner);
 
         try {
-            const response = await fetch('/api/generate-puzzle', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ theme })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: "Gagal memproses permintaan di server." }));
-                throw new Error(errorData.error || 'Gagal membuat puzzle dari server');
-            }
-            
-            const data = await response.json();
-
+            const data = await api.generatePuzzle(theme);
             if (data && data.grid && data.clues) {
-                puzzleData = data;
-                renderPuzzle();
-                loadingSpinner.classList.add('hidden');
-                gameScreen.classList.remove('hidden');
+                gameState.puzzleData = data;
+                renderPuzzle(gameState.puzzleData);
+                showScreen(elements.gameScreen);
                 startTimer();
             } else {
                 throw new Error("Data puzzle yang diterima tidak valid.");
             }
-            
         } catch (error) {
             Swal.fire('Error!', `Terjadi kesalahan: ${error.message}`, 'error');
-            loadingSpinner.classList.add('hidden');
-            setupScreen.classList.remove('hidden');
+            showScreen(elements.setupScreen);
         }
     });
 
-    // --- Logika Penyelesaian Game ---
+    // --- Game Logic Listeners ---
     finishGameBtn.addEventListener('click', () => {
         const inputs = document.querySelectorAll('#crossword-grid input');
-        let hasAnswer = Array.from(inputs).some(input => input.value.trim() !== '');
-
-        if (!hasAnswer) {
+        if (!Array.from(inputs).some(input => input.value.trim() !== '')) {
             Swal.fire({
-                icon: 'error',
-                title: 'Gagal Menyelesaikan',
+                icon: 'error', title: 'Gagal Menyelesaikan',
                 text: 'Anda harus mengisi setidaknya satu jawaban terlebih dahulu!',
-                timer: 5000,
-                timerProgressBar: true,
-                showConfirmButton: false
+                timer: 5000, timerProgressBar: true, showConfirmButton: false
             });
             return;
         }
 
         Swal.fire({
             title: 'Selesaikan Permainan?',
-            text: "Apakah Anda yakin? Jawaban akan diperiksa dan permainan akan berakhir.",
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#28a745',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Ya, selesaikan!',
-            cancelButtonText: 'Batal'
+            text: "Apakah Anda yakin? Jawaban akan diperiksa.",
+            icon: 'question', showCancelButton: true, confirmButtonColor: '#28a745',
+            cancelButtonColor: '#d33', confirmButtonText: 'Ya, selesaikan!', cancelButtonText: 'Batal'
         }).then(async (result) => {
             if (result.isConfirmed) {
                 stopTimer();
@@ -136,53 +79,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 finishGameBtn.textContent = "Memeriksa...";
 
                 const userGrid = [];
-                const size = puzzleData.grid.length;
-                
-                for (let i = 0; i < size; i++) {
-                    userGrid.push(new Array(size).fill(null));
-                }
-
+                const size = gameState.puzzleData.grid.length;
+                for (let i = 0; i < size; i++) userGrid.push(new Array(size).fill(null));
                 inputs.forEach(input => {
-                    const row = parseInt(input.dataset.row, 10);
-                    const col = parseInt(input.dataset.col, 10);
-                    userGrid[row][col] = input.value;
+                    userGrid[input.dataset.row][input.dataset.col] = input.value;
                 });
 
                 try {
-                    const response = await fetch('/api/check-answers', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ grid: userGrid })
+                    const resultData = await api.checkAnswers(userGrid);
+                    
+                    inputs.forEach(input => {
+                        const { row, col } = input.dataset;
+                        input.classList.remove('correct', 'incorrect');
+                        if (resultData.result_grid[row][col] === 'correct') input.classList.add('correct');
+                        else if (resultData.result_grid[row][col] === 'incorrect') input.classList.add('incorrect');
+                        input.disabled = true;
                     });
 
-                    if (!response.ok) throw new Error("Gagal memeriksa jawaban di server.");
-
-                    const resultData = await response.json();
+                    await api.submitScore(gameState.userSettings.name, resultData.score, gameState.userSettings.theme);
                     
-                    // --- LOGIKA BARU ---
-                    // 1. Kirim skor ke database DAN TUNGGU SAMPAI SELESAI
-                    await fetch('/api/submit-score', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            name: userSettings.name,
-                            score: resultData.score,
-                            theme: userSettings.theme
-                        })
-                    });
-
-                    // 2. Transisi ke End Screen
-                    gameScreen.classList.add('hidden');
-                    endScreen.classList.remove('hidden');
-                    
-                    // 3. Tampilkan skor akhir
-                    document.getElementById('final-score').textContent = resultData.score;
-
-                    // 4. SEKARANG baru ambil dan tampilkan leaderboard yang sudah terupdate
-                    await showLeaderboard(userSettings.name);
+                    showScreen(elements.endScreen);
+                    elements.finalScore.textContent = resultData.score;
+                    await showLeaderboard(gameState.userSettings.name);
 
                 } catch (error) {
-                    Swal.fire('Error!', `Terjadi kesalahan saat menyelesaikan game: ${error.message}`, 'error');
+                    Swal.fire('Error!', `Terjadi kesalahan: ${error.message}`, 'error');
                     finishGameBtn.disabled = false;
                     finishGameBtn.textContent = "Selesai & Cek Jawaban";
                     startTimer();
@@ -191,272 +112,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- Event Listeners untuk End Screen ---
-    playAgainBtn.addEventListener('click', () => {
-        window.location.reload();
-    });
+    // --- End Screen Listeners ---
+    playAgainBtn.addEventListener('click', () => window.location.reload());
 
     submitFeedbackBtn.addEventListener('click', async () => {
-        const suggestion = document.getElementById('feedback-box').value;
+        const suggestion = elements.feedbackBox.value;
         if (suggestion.trim()) {
-            await fetch('/api/submit-feedback', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ suggestion })
-            });
+            await api.submitFeedback(suggestion);
             Swal.fire('Terima Kasih!', 'Saran Anda telah kami terima.', 'success');
-            document.getElementById('feedback-box').value = '';
+            elements.feedbackBox.value = '';
         } else {
             Swal.fire('Oops...', 'Saran tidak boleh kosong.', 'warning');
         }
     });
 
-    // --- Logika Interaksi Grid dan Petunjuk ---
-    function highlightCellsAndClues() {
-        document.querySelectorAll('.current-focus, .current-word, .current-clue').forEach(el => {
-            el.classList.remove('current-focus', 'current-word', 'current-clue');
-        });
-
-        if (currentFocus.row === null) return;
-
-        const { acrossWord, downWord, acrossClueEl, downClueEl } = findWordsAndClues(currentFocus.row, currentFocus.col);
-
-        if (currentFocus.direction === 'across' && acrossWord) {
-            acrossWord.cells.forEach(cell => cell.classList.add('current-word'));
-            if (acrossClueEl) acrossClueEl.classList.add('current-clue');
-        } else if (currentFocus.direction === 'down' && downWord) {
-            downWord.cells.forEach(cell => cell.classList.add('current-word'));
-            if (downClueEl) downClueEl.classList.add('current-clue');
-        }
-
-        const activeCell = document.querySelector(`input[data-row='${currentFocus.row}'][data-col='${currentFocus.col}']`);
-        if (activeCell) {
-            activeCell.parentElement.classList.add('current-focus');
-            activeCell.focus();
-        }
+    // --- Timer Functions ---
+    function startTimer() {
+        let seconds = 0;
+        elements.timerDisplay.textContent = "Durasi: 00:00";
+        if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+        gameState.timerInterval = setInterval(() => {
+            seconds++;
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            elements.timerDisplay.textContent = `Durasi: ${mins}:${secs}`;
+        }, 1000);
     }
 
-    function findWordsAndClues(row, col) {
-        let acrossWord = null, downWord = null, acrossClueEl = null, downClueEl = null;
-
-        puzzleData.clues.across.forEach(clue => {
-            const wordLength = getWordLength(clue.number, 'across');
-            if (row === clue.row && col >= clue.col && col < clue.col + wordLength) {
-                acrossWord = { clue, cells: [] };
-                for (let i = 0; i < wordLength; i++) {
-                    const cell = document.querySelector(`input[data-row='${clue.row}'][data-col='${clue.col + i}']`);
-                    if (cell) acrossWord.cells.push(cell.parentElement);
-                }
-                acrossClueEl = document.querySelector(`#across-clues li[data-number='${clue.number}']`);
-            }
-        });
-
-        puzzleData.clues.down.forEach(clue => {
-            const wordLength = getWordLength(clue.number, 'down');
-            if (col === clue.col && row >= clue.row && row < clue.row + wordLength) {
-                downWord = { clue, cells: [] };
-                for (let i = 0; i < wordLength; i++) {
-                    const cell = document.querySelector(`input[data-row='${clue.row + i}'][data-col='${clue.col}']`);
-                    if (cell) downWord.cells.push(cell.parentElement);
-                }
-                downClueEl = document.querySelector(`#down-clues li[data-number='${clue.number}']`);
-            }
-        });
-
-        return { acrossWord, downWord, acrossClueEl, downClueEl };
+    function stopTimer() {
+        if (gameState.timerInterval) clearInterval(gameState.timerInterval);
     }
 
-    function getWordLength(number, direction) {
-        const grid = puzzleData.grid;
-        const size = grid.length;
-        const clue = puzzleData.clues[direction].find(c => c.number === number);
-        if (!clue) return 0;
-
-        let length = 0;
-        if (direction === 'across') {
-            for (let c = clue.col; c < size && grid[clue.row][c] !== null; c++) length++;
-        } else {
-            for (let r = clue.row; r < size && grid[r][clue.col] !== null; r++) length++;
-        }
-        return length;
-    }
-
-    gridContainer.addEventListener('click', (e) => {
-        if (e.target.tagName !== 'INPUT') return;
-
-        const row = parseInt(e.target.dataset.row);
-        const col = parseInt(e.target.dataset.col);
-
-        const { acrossWord, downWord } = findWordsAndClues(row, col);
-
-        if (currentFocus.row === row && currentFocus.col === col) {
-            if (currentFocus.direction === 'across' && downWord) {
-                currentFocus.direction = 'down';
-            } else if (currentFocus.direction === 'down' && acrossWord) {
-                currentFocus.direction = 'across';
-            }
-        } else {
-            currentFocus.row = row;
-            currentFocus.col = col;
-            if (acrossWord) {
-                currentFocus.direction = 'across';
-            } else if (downWord) {
-                currentFocus.direction = 'down';
-            }
-        }
-        highlightCellsAndClues();
-    });
-
-    gridContainer.addEventListener('keydown', (e) => {
-        if (currentFocus.row === null || gameFinished) return;
-        let { row, col, direction } = currentFocus;
-        const size = puzzleData.grid.length;
-        
-        const key = e.key;
-        if (key.length === 1 && key.match(/[a-z0-9]/i)) {
-            setTimeout(() => {
-                if (direction === 'across' && col + 1 < size) {
-                    const nextInput = document.querySelector(`input[data-row='${row}'][data-col='${col + 1}']`);
-                    if (nextInput) {
-                        currentFocus.col++;
-                        highlightCellsAndClues();
-                    }
-                } else if (direction === 'down' && row + 1 < size) {
-                    const nextInput = document.querySelector(`input[data-row='${row + 1}'][data-col='${col}']`);
-                    if (nextInput) {
-                        currentFocus.row++;
-                        highlightCellsAndClues();
-                    }
-                }
-            }, 0);
-        } else if (key === 'ArrowUp') { e.preventDefault(); if (row > 0) currentFocus.row--; }
-        else if (key === 'ArrowDown') { e.preventDefault(); if (row < size - 1) currentFocus.row++; }
-        else if (key === 'ArrowLeft') { e.preventDefault(); if (col > 0) currentFocus.col--; }
-        else if (key === 'ArrowRight') { e.preventDefault(); if (col < size - 1) currentFocus.col++; }
-        else if (key === 'Backspace' && e.target.value === '') {
-             setTimeout(() => {
-                if (direction === 'across' && col > 0) {
-                    const prevInput = document.querySelector(`input[data-row='${row}'][data-col='${col - 1}']`);
-                    if (prevInput) {
-                        currentFocus.col--;
-                        highlightCellsAndClues();
-                    }
-                } else if (direction === 'down' && row > 0) {
-                    const prevInput = document.querySelector(`input[data-row='${row - 1}'][data-col='${col}']`);
-                    if (prevInput) {
-                        currentFocus.row--;
-                        highlightCellsAndClues();
-                    }
-                }
-            }, 0);
-        }
-
-        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
-            highlightCellsAndClues();
-        }
-    });
-
-    function addClueClickListener(listElement) {
-        listElement.addEventListener('click', (e) => {
-            const li = e.target.closest('li');
-            if (li) {
-                currentFocus.row = parseInt(li.dataset.row);
-                currentFocus.col = parseInt(li.dataset.col);
-                currentFocus.direction = li.parentElement.parentElement.id === 'across-clues' ? 'across' : 'down';
-                highlightCellsAndClues();
-            }
-        });
-    }
-    addClueClickListener(acrossCluesList);
-    addClueClickListener(downCluesList);
-
-    // --- Fungsi Render dan Leaderboard ---
-    function renderPuzzle() {
-        const gridEl = document.getElementById('crossword-grid');
-        const size = puzzleData.grid.length;
-
-        gridEl.innerHTML = '';
-        gridEl.style.gridTemplateColumns = `repeat(${size}, 38px)`;
-        gridEl.style.gridTemplateRows = `repeat(${size}, 38px)`;
-
-        const clueNumbersMap = {};
-        puzzleData.clues.across.forEach(clue => {
-            const key = `${clue.row},${clue.col}`;
-            if (!clueNumbersMap[key]) clueNumbersMap[key] = clue.number;
-        });
-        puzzleData.clues.down.forEach(clue => {
-            const key = `${clue.row},${clue.col}`;
-            if (!clueNumbersMap[key]) clueNumbersMap[key] = clue.number;
-        });
-
-        puzzleData.grid.forEach((row, r_idx) => {
-            row.forEach((cell, c_idx) => {
-                const cellEl = document.createElement('div');
-                cellEl.classList.add('grid-cell');
-                
-                if (cell === null) {
-                    cellEl.classList.add('black');
-                } else {
-                    const key = `${r_idx},${c_idx}`;
-                    if (clueNumbersMap[key]) {
-                        const numEl = document.createElement('div');
-                        numEl.classList.add('clue-number');
-                        numEl.textContent = clueNumbersMap[key];
-                        cellEl.appendChild(numEl);
-                    }
-                    const input = document.createElement('input');
-                    input.maxLength = 1;
-                    input.dataset.row = r_idx;
-                    input.dataset.col = c_idx;
-                    cellEl.appendChild(input);
-                }
-                gridEl.appendChild(cellEl);
-            });
-        });
-
-        acrossCluesList.innerHTML = '';
-        puzzleData.clues.across.forEach(c => {
-            const li = document.createElement('li');
-            li.textContent = `${c.number}. ${c.clue}`;
-            li.dataset.number = c.number;
-            li.dataset.row = c.row;
-            li.dataset.col = c.col;
-            acrossCluesList.appendChild(li);
-        });
-        
-        downCluesList.innerHTML = '';
-        puzzleData.clues.down.forEach(c => {
-            const li = document.createElement('li');
-            li.textContent = `${c.number}. ${c.clue}`;
-            li.dataset.number = c.number;
-            li.dataset.row = c.row;
-            li.dataset.col = c.col;
-            downCluesList.appendChild(li);
-        });
-    }
-
-    // --- FUNGSI LEADERBOARD YANG DIPERBARUI ---
-    async function showLeaderboard(currentUserName) {
-        try {
-            const response = await fetch('/api/leaderboard');
-            const scores = await response.json();
-            const listEl = document.getElementById('leaderboard-list');
-            listEl.innerHTML = '';
-            if (scores.length === 0) {
-                listEl.innerHTML = '<li>Belum ada skor. Jadilah yang pertama!</li>';
-            } else {
-                scores.forEach(score => {
-                    const li = document.createElement('li');
-                    li.textContent = `${score[0]} - ${score[1]}`;
-                    // Tambahkan class highlight jika nama cocok
-                    if (score[0] === currentUserName) {
-                        li.classList.add('user-highlight');
-                    }
-                    listEl.appendChild(li);
-                });
-            }
-        } catch (error) {
-            console.error("Gagal memuat leaderboard:", error);
-        }
-    }
+    // Initialize all interactions
+    initializePuzzleInteraction();
 });

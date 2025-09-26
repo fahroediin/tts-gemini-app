@@ -32,6 +32,14 @@ def init_db():
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS access_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_name TEXT NOT NULL,
+            theme TEXT NOT NULL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     conn.commit()
     conn.close()
 
@@ -90,3 +98,34 @@ def get_and_delete_puzzle(theme):
     else:
         conn.close()
         return None
+
+def log_access(player_name, theme):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO access_log (player_name, theme) VALUES (?, ?)", (player_name, theme))
+    conn.commit()
+    conn.close()
+
+def get_all_feedback():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT suggestion, timestamp FROM feedback ORDER BY timestamp DESC")
+    feedback = cursor.fetchall()
+    conn.close()
+    return feedback
+
+def get_theme_popularity():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT theme, COUNT(*) as count FROM access_log GROUP BY theme ORDER BY count DESC")
+    popularity = cursor.fetchall()
+    conn.close()
+    return popularity
+
+def get_access_logs(limit=50):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT player_name, theme, timestamp FROM access_log ORDER BY timestamp DESC LIMIT ?", (limit,))
+    logs = cursor.fetchall()
+    conn.close()
+    return logs
