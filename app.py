@@ -61,7 +61,7 @@ def create_app():
     # --- KONFIGURASI ADMIN ---
     # Ganti dengan hash yang Anda generate dari create_admin.py
     app.config['ADMIN_USERNAME'] = 'admin'
-    app.config['ADMIN_PASSWORD_HASH'] = 'pbkdf2:sha256:1000000$a4ytLuzEzNcpuivT$5d30a7f3bcbbbb6ba2b975f29877a1431825e901d1029b29fd5eb9c0d6e12e49' # <-- PASTE HASH ANDA DI SINI
+    app.config['ADMIN_PASSWORD_HASH'] = 'pbkdf2:sha256:1000000$odGUmy8pldTsrZGQ$0d64bd490829abfc38ef1427310752a2a49424c2f95a5af1d1bbc39cdd931429' # <-- PASTE HASH ANDA DI SINI
 
     # --- SETUP FLASK-LOGIN ---
     login_manager = LoginManager()
