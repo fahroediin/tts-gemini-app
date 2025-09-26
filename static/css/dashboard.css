@@ -1,0 +1,112 @@
+/* Override beberapa style dasar untuk halaman dashboard */
+body {
+    background-color: #f8f9fa; /* Latar belakang sedikit lebih abu-abu */
+}
+
+.container {
+    max-width: 1600px; /* Perlebar container untuk dashboard */
+}
+
+/* Grid Layout untuk Dashboard */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Dua kolom dengan lebar sama */
+    grid-template-rows: auto 1fr; /* Baris pertama auto, baris kedua mengisi sisa */
+    grid-template-areas:
+        "chart feedback"
+        "log log";
+    gap: 25px;
+    margin-top: 20px;
+}
+
+/* Styling Kartu Dashboard */
+.dashboard-card {
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 25px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-card h3 {
+    margin-top: 0;
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.2em;
+    color: #495057;
+}
+
+/* Penempatan Grid Area */
+.chart-card { grid-area: chart; }
+.feedback-card { grid-area: feedback; }
+.log-card { grid-area: log; }
+
+/* Styling Chart */
+.chart-container {
+    position: relative;
+    height: 350px; /* Tinggi tetap untuk chart */
+    margin: auto;
+}
+
+/* Styling Tabel */
+.table-container {
+    flex-grow: 1; /* Agar tabel mengisi ruang vertikal */
+    max-height: 350px; /* Batas tinggi untuk tabel yang bisa di-scroll */
+    overflow-y: auto;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9em;
+}
+
+th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #e9ecef;
+    white-space: nowrap;
+}
+
+td:last-child {
+    white-space: normal; /* Izinkan teks saran untuk wrap */
+}
+
+thead th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+tbody tr:hover {
+    background-color: #e9ecef;
+}
+
+/* Responsive Design untuk Dashboard */
+@media (max-width: 1200px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "chart"
+            "feedback"
+            "log";
+    }
+    .table-container, .chart-container {
+        height: auto; /* Tinggi otomatis di layar kecil */
+        max-height: 400px;
+    }
+}
