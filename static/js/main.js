@@ -2,11 +2,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Deklarasi Elemen UI ---
     const setupScreen = document.getElementById('setup-screen');
     const gameScreen = document.getElementById('game-screen');
+    const endScreen = document.getElementById('end-screen');
     const loadingSpinner = document.getElementById('loading-spinner');
+    
     const startGameBtn = document.getElementById('start-game-btn');
     const randomNameBtn = document.getElementById('random-name-btn');
     const finishGameBtn = document.getElementById('finish-game-btn');
-    const gameScoreDisplay = document.getElementById('game-score-display');
+    const playAgainBtn = document.getElementById('play-again-btn');
+    const submitFeedbackBtn = document.getElementById('submit-feedback-btn');
+    
     const timerDisplay = document.getElementById('timer-display');
     const gridContainer = document.getElementById('grid-container');
     const acrossCluesList = document.querySelector('#across-clues ul');
@@ -87,9 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderPuzzle();
                 loadingSpinner.classList.add('hidden');
                 gameScreen.classList.remove('hidden');
-                gameScoreDisplay.classList.add('hidden');
-                finishGameBtn.textContent = "Selesai & Cek Jawaban";
-                finishGameBtn.disabled = false;
                 startTimer();
             } else {
                 throw new Error("Data puzzle yang diterima tidak valid.");
@@ -104,11 +105,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Logika Penyelesaian Game ---
     finishGameBtn.addEventListener('click', () => {
-        if (gameFinished) {
-            window.location.reload();
-            return;
-        }
-
         const inputs = document.querySelectorAll('#crossword-grid input');
         let hasAnswer = Array.from(inputs).some(input => input.value.trim() !== '');
 
@@ -163,20 +159,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const resultData = await response.json();
                     
-                    const resultGrid = resultData.result_grid;
-                    inputs.forEach(input => {
-                        const row = parseInt(input.dataset.row, 10);
-                        const col = parseInt(input.dataset.col, 10);
-                        
-                        input.classList.remove('correct', 'incorrect');
-                        if (resultGrid[row][col] === 'correct') input.classList.add('correct');
-                        else if (resultGrid[row][col] === 'incorrect') input.classList.add('incorrect');
-                        input.disabled = true;
-                    });
-
-                    gameScoreDisplay.textContent = `Skor Anda: ${resultData.score}`;
-                    gameScoreDisplay.classList.remove('hidden');
-
+                    // --- LOGIKA BARU ---
+                    // 1. Kirim skor ke database DAN TUNGGU SAMPAI SELESAI
                     await fetch('/api/submit-score', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -187,9 +171,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         })
                     });
 
-                    finishGameBtn.textContent = "Main Lagi";
-                    finishGameBtn.disabled = false;
-                    gameFinished = true;
+                    // 2. Transisi ke End Screen
+                    gameScreen.classList.add('hidden');
+                    endScreen.classList.remove('hidden');
+                    
+                    // 3. Tampilkan skor akhir
+                    document.getElementById('final-score').textContent = resultData.score;
+
+                    // 4. SEKARANG baru ambil dan tampilkan leaderboard yang sudah terupdate
+                    await showLeaderboard(userSettings.name);
 
                 } catch (error) {
                     Swal.fire('Error!', `Terjadi kesalahan saat menyelesaikan game: ${error.message}`, 'error');
@@ -201,8 +191,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- Logika Interaksi Grid dan Petunjuk ---
+    // --- Event Listeners untuk End Screen ---
+    playAgainBtn.addEventListener('click', () => {
+        window.location.reload();
+    });
 
+    submitFeedbackBtn.addEventListener('click', async () => {
+        const suggestion = document.getElementById('feedback-box').value;
+        if (suggestion.trim()) {
+            await fetch('/api/submit-feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ suggestion })
+            });
+            Swal.fire('Terima Kasih!', 'Saran Anda telah kami terima.', 'success');
+            document.getElementById('feedback-box').value = '';
+        } else {
+            Swal.fire('Oops...', 'Saran tidak boleh kosong.', 'warning');
+        }
+    });
+
+    // --- Logika Interaksi Grid dan Petunjuk ---
     function highlightCellsAndClues() {
         document.querySelectorAll('.current-focus, .current-word, .current-clue').forEach(el => {
             el.classList.remove('current-focus', 'current-word', 'current-clue');
@@ -272,7 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return length;
     }
 
-    // --- EVENT LISTENER YANG DIPERBAIKI ---
     gridContainer.addEventListener('click', (e) => {
         if (e.target.tagName !== 'INPUT') return;
 
@@ -282,19 +290,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const { acrossWord, downWord } = findWordsAndClues(row, col);
 
         if (currentFocus.row === row && currentFocus.col === col) {
-            // --- LOGIKA TOGGLE BARU ---
-            // Jika sedang mendatar dan ada kata menurun, ganti ke menurun.
             if (currentFocus.direction === 'across' && downWord) {
                 currentFocus.direction = 'down';
-            // Jika sedang menurun dan ada kata mendatar, ganti ke mendatar.
             } else if (currentFocus.direction === 'down' && acrossWord) {
                 currentFocus.direction = 'across';
             }
         } else {
-            // --- LOGIKA KLIK BARU ---
             currentFocus.row = row;
             currentFocus.col = col;
-            // Default ke mendatar jika ada, jika tidak baru ke menurun.
             if (acrossWord) {
                 currentFocus.direction = 'across';
             } else if (downWord) {
@@ -367,7 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
     addClueClickListener(acrossCluesList);
     addClueClickListener(downCluesList);
 
-    // --- Fungsi Render ---
+    // --- Fungsi Render dan Leaderboard ---
     function renderPuzzle() {
         const gridEl = document.getElementById('crossword-grid');
         const size = puzzleData.grid.length;
@@ -430,5 +433,30 @@ document.addEventListener('DOMContentLoaded', () => {
             li.dataset.col = c.col;
             downCluesList.appendChild(li);
         });
+    }
+
+    // --- FUNGSI LEADERBOARD YANG DIPERBARUI ---
+    async function showLeaderboard(currentUserName) {
+        try {
+            const response = await fetch('/api/leaderboard');
+            const scores = await response.json();
+            const listEl = document.getElementById('leaderboard-list');
+            listEl.innerHTML = '';
+            if (scores.length === 0) {
+                listEl.innerHTML = '<li>Belum ada skor. Jadilah yang pertama!</li>';
+            } else {
+                scores.forEach(score => {
+                    const li = document.createElement('li');
+                    li.textContent = `${score[0]} - ${score[1]}`;
+                    // Tambahkan class highlight jika nama cocok
+                    if (score[0] === currentUserName) {
+                        li.classList.add('user-highlight');
+                    }
+                    listEl.appendChild(li);
+                });
+            }
+        } catch (error) {
+            console.error("Gagal memuat leaderboard:", error);
+        }
     }
 });

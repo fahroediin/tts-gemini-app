@@ -44,7 +44,6 @@
         <div id="game-screen" class="screen-card hidden">
             <div class="game-header">
                 <div id="timer-display">Durasi: 00:00</div>
-                <div id="game-score-display" class="hidden"></div>
                 <button id="finish-game-btn">Selesai & Cek Jawaban</button>
             </div>
 
@@ -59,15 +58,34 @@
             </div>
         </div>
 
+        <!-- END SCREEN BARU (DIKEMBALIKAN) -->
+        <div id="end-screen" class="screen-card hidden">
+            <h2>Permainan Selesai!</h2>
+            <p class="final-score-text">Skor Akhir Anda: <strong id="final-score">0</strong></p>
+            
+            <div class="end-screen-content">
+                <div class="leaderboard-container">
+                    <h3><i class="fa-solid fa-trophy"></i> Papan Peringkat</h3>
+                    <ol id="leaderboard-list"></ol>
+                </div>
+                <div class="feedback-container">
+                    <h3><i class="fa-solid fa-lightbulb"></i> Punya Saran?</h3>
+                    <textarea id="feedback-box" placeholder="Bantu kami menjadi lebih baik..."></textarea>
+                    <button id="submit-feedback-btn">Kirim Saran</button>
+                </div>
+            </div>
+            
+            <button id="play-again-btn">Main Lagi</button>
+        </div>
+
         <!-- Loading Spinner -->
         <div id="loading-spinner" class="hidden">
             <h2>Membuat TTS... Mohon tunggu...</h2>
             <p>Kami sedang memproses pertanyaan untuk Anda!</p>
         </div>
 
-        <!-- FOOTER BARU -->
         <footer>
-            <p>Versi 1.2.0 &bull; Created By Fahrudin</p>
+            <p>Versi 1.2.0 &bull; Dibuat oleh Fahrudin</p>
         </footer>
     </div>
 
