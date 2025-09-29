@@ -75,6 +75,8 @@ h2, h3 {
     margin: 5px;
     font-size: 1em;
     font-family: 'Poppins', sans-serif;
+    width: calc(100% - 30px);
+    max-width: 300px;
 }
 
 button {
@@ -109,7 +111,7 @@ button:disabled {
     background-color: #5a6268;
 }
 
-/* Game Screen Styling */
+/* --- DESAIN DASAR (DESKTOP) --- */
 .game-header {
     display: flex;
     justify-content: space-between;
@@ -136,16 +138,18 @@ button:disabled {
 
 #grid-container {
     flex-shrink: 0;
+    width: 572px; /* Lebar tetap untuk desktop (15 * 38px) */
 }
 
 #crossword-grid {
     display: grid;
+    grid-template-columns: repeat(15, 38px); /* Kolom dengan lebar tetap */
+    grid-template-rows: repeat(15, 38px); /* Baris dengan tinggi tetap */
     border: 2px solid #343a40;
 }
 
 .grid-cell {
-    width: 38px;
-    height: 38px;
+    /* Ukuran sudah diatur oleh grid-template-columns/rows */
     border: 1px solid #ced4da;
     position: relative;
     background-color: white;
@@ -170,13 +174,8 @@ button:disabled {
     caret-color: #007bff;
 }
 
-.grid-cell input:focus {
-    outline: none;
-}
-
-.grid-cell input:disabled {
-    background-color: transparent;
-}
+.grid-cell input:focus { outline: none; }
+.grid-cell input:disabled { background-color: transparent; }
 
 .clue-number {
     position: absolute;
@@ -195,248 +194,70 @@ button:disabled {
     width: 100%;
 }
 
-.clue-box {
-    text-align: left;
-}
+.clue-box { text-align: left; }
+.clue-box h3 { margin-top: 0; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #e9ecef; }
+.clue-box ul { list-style-type: none; padding: 0; margin: 0; max-height: 250px; overflow-y: auto; }
+.clue-box li { padding: 6px 8px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; line-height: 1.4; }
+.clue-box li:hover { background-color: #e9ecef; }
 
-.clue-box h3 {
-    margin-top: 0;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid #e9ecef;
-}
+/* Highlighting & Feedback */
+.current-focus { background-color: #cfe2ff !important; }
+.current-word { background-color: #e7f3ff !important; }
+.current-clue { background-color: #cfe2ff !important; font-weight: 600; }
+#finish-game-btn { background-color: #28a745; }
+#finish-game-btn:hover { background-color: #218838; }
+.grid-cell input.correct { background-color: #d4edda !important; color: #155724; }
+.grid-cell input.incorrect { background-color: #f8d7da !important; color: #721c24; }
 
-.clue-box ul {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-    max-height: 250px;
-    overflow-y: auto;
-}
-
-.clue-box li {
-    padding: 6px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    line-height: 1.4;
-}
-
-.clue-box li:hover {
-    background-color: #e9ecef;
-}
-
-/* Highlighting Classes */
-.current-focus {
-    background-color: #cfe2ff !important;
-}
-
-.current-word {
-    background-color: #e7f3ff !important;
-}
-
-.current-clue {
-    background-color: #cfe2ff !important;
-    font-weight: 600;
-}
-
-#finish-game-btn {
-    background-color: #28a745;
-}
-#finish-game-btn:hover {
-    background-color: #218838;
-}
-
-/* Feedback Styling */
-.grid-cell input.correct {
-    background-color: #d4edda !important;
-    color: #155724;
-}
-
-.grid-cell input.incorrect {
-    background-color: #f8d7da !important;
-    color: #721c24;
-}
-
-/* Loading Spinner */
-#loading-spinner {
-    font-size: 1.2em;
-    font-weight: bold;
-    padding: 40px;
-}
-
-/* --- STYLING END SCREEN BARU --- */
-#end-screen h2 {
-    font-size: 2em;
-}
-.final-score-text {
-    font-size: 1.8em;
-    font-weight: 600;
-    color: #007bff;
-    margin: 10px 0 30px 0;
-}
-.end-screen-content {
-    display: flex;
-    gap: 30px;
-    text-align: left;
-    margin-bottom: 30px;
-}
-.leaderboard-container, .feedback-container {
-    flex: 1;
-    background-color: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-}
-.leaderboard-container h3, .feedback-container h3 {
-    margin-top: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-#leaderboard-list {
-    list-style-position: inside;
-    padding: 0;
-}
-#leaderboard-list li {
-    padding: 5px 0;
-    border-bottom: 1px solid #e9ecef;
-}
-#leaderboard-list li:last-child {
-    border-bottom: none;
-}
-#feedback-box {
-    width: 100%;
-    height: 80px;
-    padding: 10px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    margin-top: 10px;
-    box-sizing: border-box;
-}
-#submit-feedback-btn {
-    margin-top: 10px;
-}
-#play-again-btn {
-    background-color: #28a745;
-}
-#play-again-btn:hover {
-    background-color: #218838;
-}
-/* ------------------------- */
-
-/* --- STYLING BARU UNTUK HIGHLIGHT LEADERBOARD --- */
-#leaderboard-list li.user-highlight {
-    background-color: #cfe2ff; /* Warna biru muda yang sama dengan highlight di grid */
-    font-weight: 600;
-    border-left: 4px solid #007bff;
-    padding-left: 10px;
-    margin-left: -14px; /* Menyesuaikan posisi agar border terlihat bagus */
-}
-
-/* --- STYLING BARU UNTUK HALAMAN LOGIN --- */
-.login-container {
-    max-width: 500px;
-    margin-top: 5vh;
-}
-
-.login-card {
-    background-color: #fff;
-    padding: 30px 40px;
-    border-radius: 8px;
-    border: 1px solid #e4e6eb;
-    margin-top: 20px;
-}
-
-.form-group {
-    margin-bottom: 20px;
-    text-align: left;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 600;
-    color: #495057;
-}
-
-.form-group input {
-    width: 100%;
-    padding: 12px 15px;
-    border: 1px solid #ced4da;
-    border-radius: 6px;
-    font-size: 1em;
-    font-family: 'Poppins', sans-serif;
-    box-sizing: border-box;
-}
-
-.login-button {
-    width: 100%;
-    padding: 15px;
-    font-size: 1.1em;
-}
-
-/* Styling untuk pesan flash */
-.alert {
-    padding: 15px;
-    margin-bottom: 20px;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    text-align: center;
-}
-.alert-danger {
-    color: #721c24;
-    background-color: #f8d7da;
-    border-color: #f5c6cb;
-}
-.alert-success {
-    color: #155724;
-    background-color: #d4edda;
-    border-color: #c3e6cb;
-}
-.alert-info {
-    color: #0c5460;
-    background-color: #d1ecf1;
-    border-color: #bee5eb;
-}
-
-/* Styling untuk tombol logout di dashboard */
-.logout-button {
-    background-color: #dc3545;
-    color: white;
-    padding: 10px 18px;
-    border-radius: 6px;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.9em;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-left: auto; /* Mendorong tombol ke kanan */
-}
-.logout-button:hover {
-    background-color: #c82333;
-}
+/* Loading Spinner & End Screen */
+#loading-spinner { font-size: 1.2em; font-weight: bold; padding: 40px; }
+#end-screen h2 { font-size: 2em; }
+.final-score-text { font-size: 1.8em; font-weight: 600; color: #007bff; margin: 10px 0 30px 0; }
+.end-screen-content { display: flex; gap: 30px; text-align: left; margin-bottom: 30px; }
+.leaderboard-container, .feedback-container { flex: 1; background-color: #f8f9fa; padding: 20px; border-radius: 8px; }
+.leaderboard-container h3, .feedback-container h3 { margin-top: 0; display: flex; align-items: center; gap: 8px; }
+#leaderboard-list { list-style-position: inside; padding: 0; }
+#leaderboard-list li { padding: 5px 0; border-bottom: 1px solid #e9ecef; }
+#leaderboard-list li:last-child { border-bottom: none; }
+#feedback-box { width: 100%; height: 80px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; margin-top: 10px; box-sizing: border-box; }
+#submit-feedback-btn { margin-top: 10px; }
+#play-again-btn { background-color: #28a745; }
+#play-again-btn:hover { background-color: #218838; }
+#leaderboard-list li.user-highlight { background-color: #cfe2ff; font-weight: 600; border-left: 4px solid #007bff; padding-left: 10px; margin-left: -14px; }
 
 /* Footer Styling */
-footer {
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid #e4e6eb;
-    font-size: 0.9em;
-    color: #6c757d;
-    text-align: center;
-}
+footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e4e6eb; font-size: 0.9em; color: #6c757d; text-align: center; }
 
-/* Responsive Design */
+/* --- PERBAIKAN RESPONSIVE --- */
+
+/* Tablet (di bawah 992px) */
 @media (max-width: 992px) {
     #puzzle-wrapper {
         flex-direction: column;
         align-items: center;
     }
+    /* KUNCI 1: Buat grid container fleksibel */
+    #grid-container {
+        width: 100%;
+        max-width: 572px; /* Batasi agar tidak terlalu besar di tablet */
+    }
+    /* KUNCI 2: Buat grid dan sel di dalamnya juga fleksibel */
+    #crossword-grid {
+        grid-template-columns: repeat(15, 1fr);
+        grid-template-rows: auto; /* Biarkan baris mengikuti aspect ratio */
+    }
+    .grid-cell {
+        width: auto;
+        height: auto;
+        aspect-ratio: 1 / 1; /* Pastikan sel selalu persegi */
+    }
+    
     #clues-wrapper {
         flex-direction: row;
         justify-content: space-around;
         margin-top: 20px;
+        width: 100%;
+        max-width: 572px;
     }
     .clue-box {
         width: 48%;
@@ -446,12 +267,19 @@ footer {
     }
 }
 
-@media (max-width: 576px) {
+/* Mobile (di bawah 768px) */
+@media (max-width: 767px) {
+    body {
+        padding: 0; /* Hapus padding body untuk memaksimalkan ruang */
+    }
     .container {
         padding: 15px;
+        border-radius: 0;
+        box-shadow: none;
+        min-height: 100vh;
     }
     .main-header h1 {
-        font-size: 1.8em;
+        font-size: 1.5em;
     }
     .game-header {
         flex-direction: column;
@@ -463,9 +291,11 @@ footer {
     .clue-box {
         width: 100%;
     }
-    .grid-cell {
-        width: 28px;
-        height: 28px;
-        font-size: 1.2em;
+    /* KUNCI 3: Sesuaikan ukuran font di dalam sel untuk mobile */
+    .grid-cell input {
+        font-size: clamp(8px, 2.5vw, 1.2em);
+    }
+    .clue-number {
+        font-size: clamp(5px, 1.5vw, 0.6em);
     }
 }
